@@ -1,0 +1,4 @@
+fazer uma tabela na conclusão 
+
+iterações  t. sequencial  t.paralelo   speedup    decimais corretos
+5             21 s           14 s	 1.537	          82
