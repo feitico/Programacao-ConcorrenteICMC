@@ -13,7 +13,7 @@ make check
 make install
 
 Compilação dos Programas
-Dentro da pasta ..pc2013-grupo09/trabalho1 use o comando make
+Dentro da pasta ..pc2013-grupo09-turmab/trabalho1 use o comando make
 
 Execução dos Programas
 Caso execute ./arquivo e encontre o seguinte erro: 
