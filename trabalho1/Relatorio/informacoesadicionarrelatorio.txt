@@ -1,6 +1,0 @@
-0.986512792 speed-up gauss-legendre
-
-0.86 speed-up monte-carlo
-
-Processador: Intel® Core™2 Quad CPU Q6600 @ 2.40GHz × 4
-Memória: 3.2 GB
