@@ -1,0 +1,19 @@
+no seguinte trecho de código 
+
+	if(isPrimo(num) != 0)
+		printf("%s = %d eh primo!\n", str, num);
+	
+	if(max < num) {
+		max = num;
+	}
+
+está correto o max imprimir o maior numero do texto todo?
+
+ou o correto seria o maior numero primo do texto?
+
+	if(isPrimo(num) != 0){
+		printf("%s = %d eh primo!\n", str, num);
+	
+		if(max < num)
+			max = num;
+	}
