@@ -60,6 +60,8 @@ int main() {
 
 	while(!feof(pWikipedia)) {
 		if(fscanf(pWikipedia, "%s", str) != EOF) {
+			palindromo(str);
+			/*	
 			if(palindromo(str)) {
 				num = 0;
 				for(i = 0; i<strlen(str); i++)
@@ -70,12 +72,12 @@ int main() {
 				if(max < num) {
 					max = num;
 				}
-			}
+			}*/
 		} 
 	}
-
+/*
 	printf("max: %d\n", max);
-	
+*/	
 	fclose(pWikipedia);
 
 	return 0;

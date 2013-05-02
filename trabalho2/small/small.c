@@ -14,7 +14,7 @@ void whitespace(char* str) {
 	*i = 0;
 }
 
-// Retorna 1 se for palindromo
+/* Retorna 1 se for palindromo */
 int palindromo(char* str) {
 	int i;
 	int half;
@@ -55,7 +55,6 @@ int main() {
 					num += (int) str[i];
 				if(max < num) {
 					max = num;
-					printf("max: %d\n", max);
 				}
 			}
 		} 
