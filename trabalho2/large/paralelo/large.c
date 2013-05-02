@@ -63,6 +63,7 @@ int main(int argc, char* argv[]) {
 	{
 		FILE* entrada;
 		int id = omp_get_thread_num();
+		int num, i;
 		char buffer[20];
 		char str[1024];
 		sprintf(buffer, "split%d.txt",id);
@@ -70,20 +71,17 @@ int main(int argc, char* argv[]) {
 
 		while(!feof(entrada)) {
         	if(fscanf(entrada, "%s", str) != EOF) {
-        		palindromo(str);
-			/*
-			if(palindromo(str)) {
-        			printf("%d: %s\n",id, str); 
+				if(palindromo(str)) {
+        			/*printf("%d: %s\n",id, str); */
 					num = 0;
         			for(i = 0; i<strlen(str); i++)
         				num += (int) str[i];
-        			if(isPrimo(num) != 0)
+        			isPrimo(num);
+/*
+					if(isPrimo(num) != 0)
         				printf("%s = %d eh primo!\n", str, num);
-                                                                 
-        			if(max < num) {
-        				max = num;
-        			}
-        		}*/
+					*/
+        		}
         	} 
         }
 		fclose(entrada);
@@ -91,3 +89,4 @@ int main(int argc, char* argv[]) {
 
 	return 0;
 }
+

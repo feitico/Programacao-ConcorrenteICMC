@@ -3,7 +3,6 @@ TEMPO_A=10
 k=3 
 for((i = $1; i<= $2; i++)) do
 	./split $i wikipedia.txt
-	echo "$i " >> time.txt
 	TEMPO=$(./timediff.bash $3 './large $i')
 	echo "$i,$TEMPO"
 
