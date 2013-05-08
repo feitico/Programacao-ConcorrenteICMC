@@ -1,6 +1,4 @@
 #!/bin/bash
-TEMPO_A=10
-k=3 
 for((i = $1; i<= $2; i++)) do
 	./split $i wikipedia.txt
 	TEMPO=$(./timediff.bash $3 './large $i')
