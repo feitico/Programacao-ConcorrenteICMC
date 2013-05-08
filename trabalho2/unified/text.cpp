@@ -12,30 +12,30 @@ int main() {
 		found = str.find_first_of(" .!?\n");
 		last = 0;
 		while(found != string::npos) {
-			if(last != 0)
+			if(last != 0) {
 				last++;
+			} 
 
-			if( (found - last >= 1)	|| (str[found] != ' ')) 
-				phase.append(str.substr(last, found));
+			phase.append(str.substr(last, found-last));
 
 			if(str[found] != ' ') {
-				cout << "phase1: " << phase << endl;
-
+				cout << "f: " << phase << endl;
 				phase = "";
-			}
+			} 
 
 			last = found;
 			found = str.find_first_of(" .!?\n", found+1);
 		}
-		if(phase
-		if(last != 0) {
-			phase.append(str.substr(last+1, found));
-			cout << "phase2" << phase << endl;
+		if(last == 0) {
+			phase.append(str.substr(last, found-last));
+		} else {
+			if(!str.substr(last+1,found-last).empty()) {
+				phase.append(str.substr(last+1,found-last));
+			}
 		}
-		if(phase.empty() && last == 0) { 
-			cout << phase.empty() << " " << last << endl;
-			cout << "phase3 " << str << endl;
-		}
+
+		if(!phase.empty())
+			cout << "f: " << phase << endl;
 			
 	}
 	return 0;
