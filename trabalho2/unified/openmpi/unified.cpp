@@ -27,7 +27,6 @@ string trim(const string &str); // Remove os espacos em branco a direita e a esq
 int proxProc(); // Retorna o id do proximo processo
 
 int main(int argc, char* argv[]) {
-	string str, palavra, frase;
 	int num; //Conta os ASCII de uma palavra para verificar se é primo
 	int i; //Contador
 	int type; // Tipo de processamento: SMALL ou LARGE
@@ -40,7 +39,6 @@ int main(int argc, char* argv[]) {
 	int id; // id do processador
 	int tag=11; // tag para as mensagens
 	MPI::Status status; // status do MPI_Recv
-	char buffer[1024];
 
 	if(argc != 3) {
 		printf("Usage: ./unified type entrada.txt\n");
@@ -56,7 +54,7 @@ int main(int argc, char* argv[]) {
 
 	numprocs = MPI::COMM_WORLD.Get_size();
 
-	cout << numprocs << endl;
+	//cout << numprocs << endl;
 
 	// Verifica o rank
 	if(id == 0) {
@@ -69,6 +67,8 @@ int main(int argc, char* argv[]) {
 		ifstream entrada(argv[2], ifstream::in);
 		int word_count = 0;
 		int prox;
+		string str, palavra, frase;
+		vector<string> pp; // palindromos primos
 		while(!entrada.eof()) {
 			if(type == SMALL) {
         		getline(entrada,str);
@@ -135,10 +135,13 @@ int main(int argc, char* argv[]) {
 
 				// Envia o tamanho da string e a string
                 prox = proxProc();
-                length = frase.size();
+                //length = str.size();
+				pp.push_back(str);
                 // buffer, size, type, dest, tag
-                MPI::COMM_WORLD.Send(&length, 1, MPI::INT, prox, tag);
-                MPI::COMM_WORLD.Send(frase.c_str(), length, MPI::CHAR, prox, tag);
+                /*
+				MPI::COMM_WORLD.Send(&length, 1, MPI::INT, prox, tag);
+                MPI::COMM_WORLD.Send(str.c_str(), length, MPI::CHAR, prox, tag);
+				*/
 				/*
         		if(palindromo(str)) {
         			num=0;
@@ -154,13 +157,21 @@ int main(int argc, char* argv[]) {
 				*/
         	}
         }
-	
+
+		prox = proxProc();
+		length = sizeof(pp);
+		MPI::COMM_WORLD.Send(&length, 1, MPI::INT, prox, tag);
+        MPI::COMM_WORLD.Send(&pp, sizeof(pp), MPI::BYTE, prox, tag);
+		
+		length = -1;
+		MPI::COMM_WORLD.Send(&length, 1, MPI::INT, i, tag);
 		// Envia um tamanho vazio indicando que acabou a leitura
+		/*
 		for(i=1; i<numprocs; i++) {
 			length = -1;
-			MPI::COMM_WORLD.Send(&length, 1, MPI::INT, prox, tag);
+			MPI::COMM_WORLD.Send(&length, 1, MPI::INT, i, tag);
 		}
-		
+		*/
 		// Imprime os palindromos primos e os não primos
 /*
 		vector<string>::iterator it;
@@ -187,15 +198,47 @@ int main(int argc, char* argv[]) {
 	} else {
 		int word_count=0;
 		int size = 0;
+		char buffer[1024];
+		string str;
+		vector<string> pp; // palindromos primos
+		vector<string> pnp; // palindromos nao primos
+		vector<string> pf; // palindromos frases
+		char* trick;
 		while(1) {
+			
 			// Worker node
 			MPI::COMM_WORLD.Recv(&size, 1, MPI::INT, 0, tag, status);
+			//cout << id << " " << size << " " << word_count << endl;
 			if(size == -1)
 				break;
-			MPI::COMM_WORLD.Recv(buffer, 1024, MPI::CHAR, 0, tag, status);
+
+			trick = new char(size);
+			MPI::COMM_WORLD.Recv(trick, size, MPI::BYTE, 0, tag, status);
+
+			
+			/*
+
+
+			buffer[size] = '\0'; //Coloca um fim na palavra ou frase
+
+			str = buffer;
+			
+			if(palindromo(str)) {
+            	num=0;
+            	length = str.size();
+            	for(i=0; i<length; i++)
+            		num += (int) str[i];
+                                                                  
+            	if(isPrimo(num) != 0)
+            		pp.push_back(str);
+            	else
+            		pnp.push_back(str);
+            }
+			*/
 			word_count++;
+			//cout << id << " " << buffer << endl;
 		}
-		cout << "WORKER " << id << " " << buffer << " " << word_count << endl;
+		cout << "WORKER " << id << " " << word_count << endl;
 	}
 
 	MPI::Finalize(); // Finaliza o MPI
@@ -260,7 +303,7 @@ string trim(const string &str)
 
 // Retorna o id do proximo processo
 int proxProc() {
-	atual_proc = (atual_proc % numprocs) ;
+	atual_proc = (atual_proc+1) % numprocs;
 	if(atual_proc == 0)
 		atual_proc++;
 	return atual_proc;
