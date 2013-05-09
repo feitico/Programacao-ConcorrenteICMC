@@ -51,39 +51,40 @@ int palindromo(char* str) {
 }
 
 int main(int argc, char* argv[]) {
-	FILE* pWikipedia;
+	FILE* entrada;
+	FILE* primo, *nao_primo;
 	char str[1024];
-	int num, i, max=0;
+	int num, i;
 
 	if(argc != 2) {
 		printf("Usage: ./large wikipedia.txt\n");
 		exit(-1);
 	}
 
-	pWikipedia = fopen(argv[1], "r");
+	entrada = fopen(argv[1], "r");
+	primo = fopen("primo.txt", "w");
+	nao_primo = fopen("nao_primo.txt", "w");
+
 	init_crivo(); /* Inicializa o crivo de erastotenes */
 
-	while(!feof(pWikipedia)) {
-		if(fscanf(pWikipedia, "%s", str) != EOF) {
-			palindromo(str);
-			/*	
+	while(!feof(entrada)) {
+		if(fscanf(entrada, "%s", str) != EOF) {
 			if(palindromo(str)) {
 				num = 0;
 				for(i = 0; i<strlen(str); i++)
 					num += (int) str[i];
 				if(isPrimo(num) != 0)
-					printf("%s = %d eh primo!\n", str, num);
+					fprintf(primo, "%s\n", str);
+				else
+					fprintf(nao_primo, "%s\n", str);
 
-				if(max < num) {
-					max = num;
-				}
-			}*/
+			}
 		} 
 	}
-/*
-	printf("max: %d\n", max);
-*/	
-	fclose(pWikipedia);
+
+	fclose(entrada);
+	fclose(primo);
+	fclose(nao_primo);
 
 	return 0;
 }

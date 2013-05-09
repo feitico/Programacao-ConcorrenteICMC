@@ -55,6 +55,10 @@ int palindromo(char* str) {
 /* 1 argumento eh o numero de threads */
 int main(int argc, char* argv[]) {
 	int n_threads = atoi(argv[1]);
+	FILE* primo, *nao_primo;
+	
+	primo = fopen("primo.txt", "w");
+	nao_primo = fopen("nao_primo.txt", "w");
 	
 	init_crivo(); /* Inicializa o crivo de erastotenes */
 
@@ -62,6 +66,7 @@ int main(int argc, char* argv[]) {
 	#pragma omp parallel
 	{
 		FILE* entrada;
+
 		int id = omp_get_thread_num();
 		int num, i;
 		char buffer[20];
@@ -72,20 +77,24 @@ int main(int argc, char* argv[]) {
 		while(!feof(entrada)) {
         	if(fscanf(entrada, "%s", str) != EOF) {
 				if(palindromo(str)) {
-        			/*printf("%d: %s\n",id, str); */
 					num = 0;
-        			for(i = 0; i<strlen(str); i++)
-        				num += (int) str[i];
-        			isPrimo(num);
-/*
+					for(i = 0; i<strlen(str); i++)
+						num += (int) str[i];
 					if(isPrimo(num) != 0)
-        				printf("%s = %d eh primo!\n", str, num);
-					*/
-        		}
+						fprintf(primo, "%s\n", str);
+					else
+						fprintf(nao_primo, "%s\n", str);
+
+				}
         	} 
         }
+		
 		fclose(entrada);
+		
 	}
+
+	fclose(primo);
+	fclose(nao_primo);
 
 	return 0;
 }
