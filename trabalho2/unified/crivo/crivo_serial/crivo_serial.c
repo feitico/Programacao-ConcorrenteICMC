@@ -4,8 +4,8 @@
 /* Inicializa o crivo de erastotenes */
 void init_crivo(){
 	/* Declaracao de variaveis */
-	int N = 8000; /* o maximo valor no qual procuramos numeros primos */
-	int sqrtN = 90; /* a raiz de N */
+	int N = 1000000; /* o maximo valor no qual procuramos numeros primos */
+	int sqrtN = 1000; /* a raiz de N */
 	int c = 2; /* usado para checar o proximo numero a ser circulado */
 	int m = 3; /* usado para chegar o proximo numero a ser marcado */
 	int lista[N]; /* a lista de numeros – se lista[x] igual a 1, entao x eh marcado. Senao eh desmarcado. */
@@ -32,16 +32,16 @@ void init_crivo(){
 		}
 	}
 
-	/* executa para todo numero na lista */
+	/* executa para todo numero na lista 
 	for(c = 2; c <= N - 1; c++){
-		/* se o numero esta desmarcado */
+		// se o numero esta desmarcado 
 		if(lista[c] == 0){
-			/* o numero e primo */
+			// o numero e primo
 			printf("%d ", c);
 		}
 	}
 	printf("\n");
-	
+	*/
 }
 
 int main(){
