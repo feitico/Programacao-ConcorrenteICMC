@@ -18,10 +18,11 @@ string trim(const string &str)
 int main() {
 	string str, frase, palavra;
 	int found, last;
+    int max=0, num;
+	frase="";
 	while(1) {
 		getline(cin,str);
-		frase="";
-		found = str.find_first_of(" .!?\n");
+		found = str.find_first_of(" .!?");
 		last = 0;
 		while(found != string::npos) {
 			if(last != 0) {
@@ -33,12 +34,15 @@ int main() {
 				frase.append(palavra);
 
 			if(str[found] != ' ') {
+                num = frase.size();
+                if(max < num)
+                    max = num;
 				cout << "f: " << frase << endl;
 				frase = "";
 			} 
 
 			last = found;
-			found = str.find_first_of(" .!?\n", found+1);
+			found = str.find_first_of(" .!?", found+1);
 		}
 		if(last == 0) {
 			palavra = trim(str.substr(last, found-last));
@@ -50,9 +54,13 @@ int main() {
 				frase.append(palavra);	
 		}
 
-		if(!frase.empty())
-			cout << "f: " << frase << endl;
-			
+		if(!frase.empty()) {
+            num = frase.size();
+            if(max < num)
+                max = num;
+//			cout << "f: " << frase << endl;
+        }
+		//cout << max << endl;	
 	}
 	return 0;
 }

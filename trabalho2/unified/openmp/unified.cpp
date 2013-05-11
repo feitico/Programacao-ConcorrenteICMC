@@ -5,9 +5,11 @@
 #include <cmath>
 #include <cstdlib>
 #include <cctype>
+#include "omp.h"
 
 #define MAX_NUM 8000
 #define RAIZ_MAX_NUM 90
+
 #define SMALL 0
 #define LARGE 1
 
