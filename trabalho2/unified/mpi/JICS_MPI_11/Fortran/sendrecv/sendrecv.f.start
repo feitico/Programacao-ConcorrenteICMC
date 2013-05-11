@@ -1,5 +1,0 @@
-
-      program sendrecv
-      include 'mpif.h'
-
-      end

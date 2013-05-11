@@ -15,7 +15,7 @@
 
 using namespace std;
 
-int primo[MAX_NUM];
+int primo[MAX_NUM]; //Vetor que indica se um numero eh primo ou nao
 
 // Funcoes auxiliares
 void init_crivo(int n); // Inicializa o crivo de erastotenes 
@@ -24,115 +24,47 @@ int palindromo(string str); // Retorna 1 se for palindromo
 string trim(const string &str); // Remove os espacos em branco a direita e a esquerda da string
 
 int main(int argc, char* argv[]) {
-	string str, palavra, frase;
-	int num; //Conta os ASCII de uma palavra para verificar se é primo
-	int i; //Contador
-	int type; // Tipo de processamento: SMALL ou LARGE
-	int size; // Otimiza o loop pára contar os ASCII de uma palavra
-	int last, found; // Usado para juntar uma frase
-	int word_cont; // Conta quantas palavras possue uma frase, frase >= 2 palavras
-	ifstream entrada(argv[2], ifstream::in);
-	vector<string> pp; // palindromos primos
-	vector<string> pnp; // palindromos nao primos
-	vector<string> pf; // palindromos frases
-
-	if(argc != 3) {
-		printf("Usage: ./unified type entrada.txt\n");
+	if(argc != 4) {
+		printf("Usage: ./unified type nthreads entrada.txt\n");
 		exit(-1);
 	}
 	
-	/* Indica se é para tratar o arquivo como large - palavra or small - palavra e por frase */
-	type = atoi(argv[1]); 
+    int n_threads = atoi(argv[2]);
+    string str;
+    int flag;
 
-	/* No texto maior verificamos se a palavra eh um numero primo */
-	if(type == LARGE)
-		init_crivo(MAX_NUM); /* Inicializa o crivo de erastotenes */
+    omp_set_num_threads(n_threads);
 
-	word_cont = 0;
-	while(!entrada.eof()) {
-		if(type == SMALL) {
-			getline(entrada,str);
-            found = str.find_first_of(" .!?");
-            last = 0;
-            while(found != string::npos) {
-            	if(last != 0) {
-            		last++;
-            	} 
-                              
-				palavra = trim(str.substr(last, found-last));
-				if(!palavra.empty()) {
-					word_cont++;
-	            	frase.append(palavra);
-				    if(palindromo(palavra))
-						pp.push_back(palavra);
-				}
+    #pragma omp master
+    {
+        ifstream in(argv[3]);
+        int thread=0;
+ 
+        //Le uma string e habilita a thread i a processa-la
+        while(!in.eof()) {
+            in >> str;
+            #pragma omp flush   
+            flag = 1;
+            #pragma omp flush (flag)
+            cout << "master: " << str << endl;
+            thread = (thread+1) % n_threads;
+        }
 
-				if(str[found] != ' ') {
-					if(word_cont >= 2)
-						if(palindromo(frase))
-							pf.push_back(frase);
+        in.close();
+    } 
 
-					frase = "";
-					word_cont = 0;
-				} 
-			                                                     
-				last = found;
-				found = str.find_first_of(" .!?", found+1);
-			}
-			if(last == 0) {
-				palavra = trim(str.substr(last, found-last));
-				if(!palavra.empty()) {
-					word_cont++;
-					frase.append(palavra);
-					if(palindromo(palavra))
-						pp.push_back(palavra);
-				}
-			} else {
-				palavra = trim(str.substr(last+1, found-last));
-				if(!palavra.empty()) {
-					word_cont++;
-					frase.append(palavra);
-					if(palindromo(palavra))
-						pp.push_back(palavra);
-				}
-			}
-		} else if (type == LARGE) {
-			entrada >> str;
-			if(palindromo(str)) {
-				num=0;
-				size = str.size();
-				for(i=0; i<size; i++)
-					num += (int) str[i];
-
-				if(isPrimo(num) != 0)
-					pp.push_back(str);
-				else
-					pnp.push_back(str);
-			}
-		}
-	}
-
-	// Imprime os palindromos primos e os não primos
-	vector<string>::iterator it;
-	if(type==LARGE)
-		cout << "Palindromos Primos (" << pp.size() << ")" << endl;
-	else
-		cout << "Palindromos (" << pp.size() << ")" << endl;
-
-	for(it = pp.begin(); it != pp.end(); ++it)
-		cout << *it << endl;
-	
-	if(type==LARGE) {
-		cout << endl << "Palindromos Nao Primos (" << pnp.size() << ")" << endl;
-		for(it = pnp.begin(); it != pnp.end(); ++it)
-			cout << *it << endl;
-	} else {
-		cout << endl << "Palindromos Frases (" << pf.size() << ")" << endl;
-		for(it = pf.begin(); it != pf.end(); ++it)
-			cout << *it << endl;
-	}
-	
-	entrada.close();
+    #pragma omp parallel
+    {
+        int id = omp_get_thread_num();
+        string mystr;
+        #pragma omp flush (flag)
+        while(flag != 1) {
+            #pragma omp flush (flag)    
+        }
+        #pragma omp flush
+        mystr = str;
+        cout << id  << " " << mystr << endl;
+    }
 
 	return 0;
 }
@@ -173,7 +105,7 @@ int palindromo(string str) {
 
 
 	for(i=0; i<=half; i++) {
-		if(str[i] != str[length-i-1]) {
+		if(tolower(str[i]) != tolower(str[length-i-1])) {
 			return 0;
 		}
 	}

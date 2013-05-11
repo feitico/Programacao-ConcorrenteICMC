@@ -1,6 +1,6 @@
 CC=g++
 CFLAGS=-fopenmp -Wall -ansi
-LDFLAGS=-fopenmp
+LDFLAGS=$(CFLAGS)
 SRC=$(wildcard *.cpp)
 OBJ=$(SRC:.cpp=.o)
 EXEC=$(SRC:.cpp=)
@@ -10,8 +10,9 @@ all: $(EXEC)
 $(EXEC): $(OBJ)
 	$(CC) $(OBJ) -o $@ $(LDFLAGS)
 
-%.o: %.c
-	$(CC) -o $@ -c $< $(CFLAGS)
+%.o: %.cpp
+	$(CC) $(CFLAGS) -o $@ -c $<
 
 clean:
 	rm -rf $(OBJ) $(EXEC)
+

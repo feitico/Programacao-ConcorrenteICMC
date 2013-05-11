@@ -1,5 +1,6 @@
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <string>
 #include <vector>
 #include <cmath>
@@ -73,10 +74,22 @@ int main(int argc, char* argv[]) {
         vector<string> pp; //Vetor de palindromos primos
         vector<string> pnp; //Vetor de palindromos nao primos
         vector<string> pf; //Vetor de frases palindromas
+        double start, end; // Tempo inicial e tempo final
+        char nodeName[256]; //Nome do nó 
+        int resultlen;
+        string filename;
+        stringstream ss;
+                                                            
+        MPI::Get_processor_name(nodeName, resultlen);
+                                                            
+        ss << "stats_" << nodeName <<  "-" << id << ".txt";
+        ss >> filename;
+        ofstream stats(filename.c_str());
 
         word_count = 0;
         found = string::npos;
         frase = "";
+        start = MPI::Wtime(); // Tempo inicial
 		while(!entrada.eof()) {
             if(type == SMALL) { // Processamento para arquivos pequenos
                 if(found == string::npos) {
@@ -275,14 +288,39 @@ int main(int argc, char* argv[]) {
         }
 
         entrada.close();
-	} else {
+        end = MPI::Wtime(); // Tempo inicial
+
+        //Imprime estatistica do no master
+        stats << nodeName << endl;
+        stats << "time" << endl;
+        stats << end - start << endl;
+        stats.close();
+	} else { // Worker nodes
 		int length = 0;
 		char trick[5000];
         int num;
         int answer;
+        stringstream ss; // Usadao para concatenar o id e com outras strings
+        string filename; // Nome do arquivo
 
+        int stat_pp=0; //numero de palavras palindromas e primas
+        int stat_pnp=0; //numero de palavras palindromas e nao primas
+        int stat_pfp=0; //numero de palavras e frase palindromas
+        int stat_np=0; //numero de palavras ou frase nao palindromas
+        char nodeName[256];
+        int resultlen;
+        double start, end;
+
+        MPI::Get_processor_name(nodeName, resultlen);
+
+        ss << "stats_" << nodeName <<  "-" << id << ".txt";
+        ss >> filename;
+//        cout << id << "filename: " << filename << endl;
+
+        ofstream stats(filename.c_str());
+
+        start = MPI::Wtime(); //Inicio do trabalho do no worker
 		while(1) {
-			// Worker node
 			MPI::COMM_WORLD.Recv(&length, 1, MPI::INT, 0, TAG_LENGTH, status); // Recebe o tamanho da palavra ou frase
 			if(length == -1) // Se for negativo, significa que acabou as palavras e frases do arquivo
 				break;
@@ -302,19 +340,30 @@ int main(int argc, char* argv[]) {
                                                                       
                     if(isPrimo(num) != 0) {
                         answer = PP;
+                        stat_pp++;
                     } else {
                         answer = PNP;
+                        stat_pnp++;
                     }
                 } else {
                     answer = PFP;
+                    stat_pfp++;
                 }
             } else {
                 answer = NP;
+                stat_np++;
             }
 //            cout << id << " " << answer <<  " " << length << " " << str << endl;
-
             MPI::COMM_WORLD.Send(&answer, 1, MPI::INT, 0, TAG_ANSWER);
 		}
+        end = MPI::Wtime(); // fim do trabalho do no worker
+
+        stats << nodeName << endl;
+        stats << "pp\tpnp\tpfp\tnp" << endl;
+        stats << stat_pp << "\t" << stat_pnp << "\t" << stat_pfp << "\t" << stat_np << endl;
+        stats << "time" << endl;
+        stats << end - start << endl;
+        stats.close();
 	}
 
 	MPI::Finalize(); // Finaliza o MPI
@@ -357,7 +406,7 @@ int palindromo(string str) {
 
 
 	for(i=0; i<=half; i++) {
-		if(str[i] != str[length-i-1]) {
+		if(tolower(str[i]) != tolower(str[length-i-1])) {
 			return 0;
 		}
 	}
