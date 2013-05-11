@@ -1,14 +1,13 @@
-CC=gcc
-CFLAGS=-fopenmp -Wall -ansi
-LDFLAGS=-fopenmp
+CC=mpicc
+CFLAGS=-lm
 SRC=$(wildcard *.c)
-OBJ=$(SRC:.c=.o)
+OBJ=$(SRC:.c=.c)
 EXEC=$(SRC:.c=)
 
 all: $(EXEC)
 
 $(EXEC): $(OBJ)
-	$(CC) $(OBJ) -o $@ $(LDFLAGS)
+	$(CC) $(OBJ) -o $@ $(CFLAGS)
 
 %.o: %.c
 	$(CC) -o $@ -c $< $(CFLAGS)
