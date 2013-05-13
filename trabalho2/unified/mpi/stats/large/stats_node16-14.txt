@@ -1,0 +1,5 @@
+node16
+pp	pnp	pfp	np
+96	2519	0	512873
+time
+252.708

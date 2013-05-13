@@ -1,0 +1,18 @@
+A versão serial small e large estão na pasta unified/serial
+A versão mpi small e large estão na pasta unified/mpi
+A versão OpenMP small esta na pasta small/openmp
+A versão OpenMP large esta na pasta large/openmp
+
+Para compilar os arquivos utilize:
+make
+
+Para rodar os arquivos OpenMP utilize o script run.bash, exemplo:
+./run.bash 1 10 2
+
+Isso faz com que o código rode 2 vezes com 1 a 10 threads, esse script mostra o tempo de cada execucação
+
+A pasta unified/serial  possui um REAME exclusivo de como roda-lo e obter resultados próximos dos obtidos na pasta results
+
+O mpi é executado do mesmo modo que o serial, exceto que é necessário utilizar o mpirun:
+mpirun -np 18 --hostfile nodes.txt ./unified 0 ../../shakespeare.txt
+

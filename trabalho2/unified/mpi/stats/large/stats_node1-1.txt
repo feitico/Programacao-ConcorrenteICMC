@@ -1,0 +1,5 @@
+node1
+pp	pnp	pfp	np
+105	2499	0	512885
+time
+253.122

@@ -1,0 +1,5 @@
+node19
+pp	pnp	pfp	np
+93	2358	0	513037
+time
+253.196

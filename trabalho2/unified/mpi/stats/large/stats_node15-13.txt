@@ -1,0 +1,5 @@
+node15
+pp	pnp	pfp	np
+80	2534	0	512874
+time
+252.615

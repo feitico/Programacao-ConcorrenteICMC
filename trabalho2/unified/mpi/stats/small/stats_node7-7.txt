@@ -1,0 +1,5 @@
+node7
+pp	pnp	pfp	np
+0	0	187	56551
+time
+33.3976

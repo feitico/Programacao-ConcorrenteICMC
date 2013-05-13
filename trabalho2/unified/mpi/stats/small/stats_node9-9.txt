@@ -1,0 +1,5 @@
+node9
+pp	pnp	pfp	np
+0	0	184	56554
+time
+29.3814

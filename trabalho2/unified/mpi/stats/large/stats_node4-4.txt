@@ -1,0 +1,5 @@
+node4
+pp	pnp	pfp	np
+90	2548	0	512851
+time
+251.923

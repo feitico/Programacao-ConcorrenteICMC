@@ -1,0 +1,5 @@
+node8
+pp	pnp	pfp	np
+108	2518	0	512863
+time
+253.202

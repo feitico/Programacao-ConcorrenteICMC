@@ -1,0 +1,5 @@
+node11
+pp	pnp	pfp	np
+0	0	197	56541
+time
+33.5895

@@ -1,0 +1,5 @@
+node18
+pp	pnp	pfp	np
+97	2500	0	512891
+time
+253.218

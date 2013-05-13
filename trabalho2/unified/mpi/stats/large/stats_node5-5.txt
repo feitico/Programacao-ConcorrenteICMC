@@ -1,0 +1,5 @@
+node5
+pp	pnp	pfp	np
+93	2426	0	512970
+time
+252.848

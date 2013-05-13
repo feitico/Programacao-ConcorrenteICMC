@@ -1,0 +1,5 @@
+node9
+pp	pnp	pfp	np
+104	2476	0	512909
+time
+251.452

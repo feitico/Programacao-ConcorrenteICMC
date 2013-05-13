@@ -1,0 +1,5 @@
+node3
+pp	pnp	pfp	np
+92	2459	0	512938
+time
+253.202

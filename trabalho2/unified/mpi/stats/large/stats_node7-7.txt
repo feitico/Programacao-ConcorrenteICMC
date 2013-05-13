@@ -1,0 +1,5 @@
+node7
+pp	pnp	pfp	np
+94	2444	0	512951
+time
+251.821

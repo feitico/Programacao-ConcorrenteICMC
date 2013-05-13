@@ -1,0 +1,5 @@
+node6
+pp	pnp	pfp	np
+82	2429	0	512978
+time
+253.195

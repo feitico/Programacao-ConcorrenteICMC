@@ -1,0 +1,5 @@
+node18
+pp	pnp	pfp	np
+0	0	194	56543
+time
+33.6382

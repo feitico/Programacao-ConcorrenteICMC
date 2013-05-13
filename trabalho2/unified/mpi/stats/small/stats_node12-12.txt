@@ -1,0 +1,5 @@
+node12
+pp	pnp	pfp	np
+0	0	200	56538
+time
+33.2079

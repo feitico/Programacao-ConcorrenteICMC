@@ -1,0 +1,5 @@
+node17
+pp	pnp	pfp	np
+0	0	177	56560
+time
+33.6377

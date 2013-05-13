@@ -1,0 +1,5 @@
+node17
+pp	pnp	pfp	np
+91	2432	0	512965
+time
+253.191

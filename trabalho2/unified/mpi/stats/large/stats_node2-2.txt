@@ -1,0 +1,5 @@
+node2
+pp	pnp	pfp	np
+90	2511	0	512888
+time
+253.18

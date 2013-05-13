@@ -1,0 +1,5 @@
+node11
+pp	pnp	pfp	np
+90	2476	0	512923
+time
+253.2

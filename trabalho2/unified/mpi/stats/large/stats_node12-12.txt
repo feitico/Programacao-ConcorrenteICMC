@@ -1,0 +1,5 @@
+node12
+pp	pnp	pfp	np
+93	2516	0	512880
+time
+251.534
