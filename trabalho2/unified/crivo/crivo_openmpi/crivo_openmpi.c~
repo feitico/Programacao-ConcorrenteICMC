@@ -1,3 +1,7 @@
+/*compilar make*/
+/* executar mpirun -np 2 ./crivo_openmpi -n 10 */
+/* executar mpirun -np 1 ./crivo_openmpi -n 1000 */
+
 #include <mpi.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -5,13 +9,6 @@
 #include <unistd.h>
 
 int main(int argc, char **argv) {
-	/*if(argc != 2){
-		printf("passagem errada de parametros\n");
-		exit(0);
-	}
-	
-	int nrThreads = atoi(argv[1]);
-	*/
 	/* Declaracao de variaveis */
 	int N = 16;	/* O numero teto em que procuraremos numeros primos */
 	int sqrtN = 0;
@@ -30,10 +27,15 @@ int main(int argc, char **argv) {
 	int H = 0;	/* O maior numero no split do processo atual */	
 	int r = 0; /* A classificacao do processo atual */
 	int p = 0; /* O numero total de processos */
+	double t1, t2, time_used; /* contabiliza o tempo de inicio e termino do programa */	
+	FILE *fileTime; /*Ponteiro do arquivo de saída*/	
 
 	/* Inicializa o ambiente mpi */
 	MPI_Init(&argc, &argv);
-	
+
+	//	
+	t1 = MPI_Wtime();
+
 	/* Determina a classificacao do processo atual e 
 		o numero de processos */
 	MPI_Comm_rank(MPI_COMM_WORLD, &r);
@@ -113,23 +115,27 @@ int main(int argc, char **argv) {
 
 	/* se a classificacao do processo atual eh 0 */
 	if( r == 0 ){
-		/* passa por todos os numeros na lista 1 */	
+		/* passa por todos os numeros na lista 1 */
+		/*		
 		for( c = 2; c <= sqrtN; c++ ){
-			/* se o numero esta desmarcado */
+			// se o numero esta desmarcado
 			if(lista1[c] == 0){
-				/* o numero eh primo, imprimir */
+				// o numero eh primo, imprimir
 				printf("%1u ", c);
 			}
-		} 
+		}
+		*/ 
 
 		/* passa por todos os valores na lista 2 */
+		/*
 		for( c = L; c <= H; c++ ){
-			/* se o numero esta desmarcado */
+			// se o numero esta desmarcado
 			if(lista2[c-L] == 0){
-				/* o numero eh primo, imprimir */
+				// o numero eh primo, imprimir
 				printf("%1u ", c);			
 			}
 		}
+		*/
 		
 		/* passa por todos os processos */
 		for( r = 1; r <= p-1; r++ ){
@@ -142,17 +148,19 @@ int main(int argc, char **argv) {
 			/* Recebe a lista 2 de processos */
 			MPI_Recv(lista2, H-L+1, MPI_INT, r, 0, 
 					MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-
+			
 			/* passa pela lista2 que recebemos */
+			/*			
 			for(c = L; c <= H; c++){
-				/* se o numero esta desmarcado */
+				// se o numero esta desmarcado
 				if(lista2[c-L] == 0){
-					/* o numero eh primo, imprimir */
+					// o numero eh primo, imprimir
 					printf("%1u ", c);
 				}
-			}						
+			}
+			*/						
 		}
-		printf("\n");
+		/*printf("\n");*/
 
 		/* se o processo nao eh classificado como 0 */
 	}else{
@@ -165,8 +173,16 @@ int main(int argc, char **argv) {
 	free(lista2);
 	free(lista1);
 	
+	t2 = MPI_Wtime();
+	
+	time_used = t2 - t1;
+
 	/* Finaliza o ambiente MPI */
-	MPI_Finalize();	
+	MPI_Finalize();
+	
+	fileTime = fopen("tempo_crivo_milhao.txt", "a");
+	fprintf(fileTime, "%d, %f\n", p, time_used);
+	fclose(fileTime);		
 
 	return 0;
 }
