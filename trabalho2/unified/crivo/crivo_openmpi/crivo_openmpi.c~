@@ -160,29 +160,27 @@ int main(int argc, char **argv) {
 			}
 			*/						
 		}
+		
+		t2 = MPI_Wtime();
+		time_used = t2 - t1;
+		
+		fileTime = fopen("tempo_crivo_milhao.txt", "a");
+		fprintf(fileTime, "%d, %f\n", p, time_used);
+		fclose(fileTime);		
 		/*printf("\n");*/
-
 		/* se o processo nao eh classificado como 0 */
 	}else{
 		/* envia a lista2 para o processo 0 */
 		MPI_Send(lista2, H-L+1, MPI_INT, 0, 0, 
 				 MPI_COMM_WORLD);
 	}
-	
+
 	/* desalocando memoria das listas */
 	free(lista2);
 	free(lista1);
-	
-	t2 = MPI_Wtime();
-	
-	time_used = t2 - t1;
 
 	/* Finaliza o ambiente MPI */
 	MPI_Finalize();
-	
-	fileTime = fopen("tempo_crivo_milhao.txt", "a");
-	fprintf(fileTime, "%d, %f\n", p, time_used);
-	fclose(fileTime);		
 
 	return 0;
 }
