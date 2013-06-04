@@ -7,7 +7,6 @@
 #include <iostream>
 #include <set>
 
-#define FILE_SIZE 24823019
 using namespace std;
 
 //Marca o tempo de inicio
@@ -16,7 +15,7 @@ void tic();
 double toc();
 
 // Read the whole file
-char* words; // [FILE_SIZE];
+char* words;
 
 struct ltstr
 {
@@ -26,8 +25,8 @@ struct ltstr
   }
 };
 
-set<char*, ltstr> dict;
-set<char*, ltstr> achadas;
+map<int, set<char*, ltstr> > dict_by_length;
+map<int, set<char*, ltstr> > founded_by_length;
 
 char* palavra_random();
 
@@ -54,19 +53,62 @@ int main(int argc, char* argv[]) {
 	// Parsea as palavras lidas
 	pch = strtok (words, " ,\n");
 
-	for(int i=0; i<100; i++) {
-	//while(pch != NULL){
+	//for(int i=0; i<100; i++) {
+	while(pch != NULL){
 		//printf ("%s\n",pch);
-		dict.insert(pch);
+		int length = strlen(pch);
+		dict_by_length[length].insert(pch);
+		
+		//dict.insert(pch);
 		pch = strtok (NULL, " ,\n");
 		//getchar();
 
 	}
-	dict_size = dict.size();
-	set<char*>::iterator it;
-	
-	cout << dict_size << endl;
 
+	int qtd_five_first=0;
+	for(int i=1; i<=5; i++)
+		qtd_five_first += dict_by_length[i].size();
+	cout << qtd_five_first << endl;
+	
+	int v[6];
+	for(int i=1; i<=5; i++) { 
+		v[i] = 0;
+		cout << i << " prop: " << dict_by_length[i].size() / (float)qtd_five_first << endl;
+	}
+/*
+	map<int, set<char*,ltstr> >::iterator it1;
+	for(it1=dict_by_length.begin(); it1!=dict_by_length.end(); ++it1) {
+		cout << it1->first << " : " << it1->second.size() << endl;
+	}
+*/
+while(true) {
+	for(int i=1; i<=5; i++)
+		v[i] = 0;
+
+	for(int i=0; i<qtd_five_first; i++) {
+		int r = rand() % qtd_five_first;
+		if(r < dict_by_length[1].size())
+			v[1]++;
+		else if(r < dict_by_length[2].size())
+			v[2]++;
+		else if(r < dict_by_length[3].size())
+			v[3]++;
+		else if(r < dict_by_length[4].size())
+			v[4]++;
+		else
+			v[5]++;
+	}
+	int diff=0;
+	for(int i=1; i<=5; i++) { 
+		diff += abs(v[i] - (int)dict_by_length[i].size());
+		cout << i << " rand: " << v[i] << " real: " << dict_by_length[i].size() << " diff: " << v[i] - (int)dict_by_length[i].size() << endl;
+	}
+	cout << "total diff: " << diff << endl;
+
+	getchar();
+	getchar();
+	}
+/*
 	int k=0;
 	while(true) {
 		char * new_word = palavra_random();
@@ -84,16 +126,16 @@ int main(int argc, char* argv[]) {
 			cout << "nao: " << new_word << endl;
 		}
 	}	
-
+*/
 /*
 	for(it = dict.begin(); it != dict.end(); ++it){
 		cout << "a: " << *it << endl;
 	}
-*/		
+*//*		
 	for(it = achadas.begin(); it != achadas.end(); ++it){
 		cout << "achei: " << *it << endl;
 	}
-
+*/
 	// Parsea as palavras lidas
 	/*
 	begin_word = 0;
