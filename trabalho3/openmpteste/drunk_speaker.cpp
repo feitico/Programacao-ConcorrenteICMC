@@ -6,6 +6,7 @@
 #include <map>
 #include <iostream>
 #include <set>
+#include "omp.h"
 
 using namespace std;
 
@@ -36,6 +37,7 @@ struct strcompare
 /* Variaveis globais */
 FILE *arq_palavras; //Ponteiro para o arquivo
 char* text; // Armazena todo o texto do arquivo
+char** block; // Le n blocos do arquivo
 
 int qtd_palavra[6]; //Qtd de palavras de tamanho 1,2,3,4,5 ( usado para gerar uniformimente essas palavras)
 int total_palavras; //Total de palavras a serem encontradas
@@ -48,150 +50,15 @@ typedef map<int, Dict > MapDict; // Representa um mapa de dicionarios, sendo a c
 MapDict dict_by_length; //Dicionario com as palavras ainda nao encontradas
 MapDict founded_by_length; //Dicionario com as palavras ja encontradas
 
+int n_threads = 4;
+
 int main(int argc, char* argv[]) {
 
+	n_threads = atoi(argv[2]);
+	omp_set_num_threads(n_threads);
 	//Inicializa o dicionario
 	init_dict(argv[1]);	
-	/*
-	MapDict::iterator it1;
-	for(it1=dict_by_length.begin(); it1!=dict_by_length.end(); ++it1) {
-		cout << it1->first << " : " << it1->second.size() << endl;
-	}
-	*/
-	cout << "map size: " << dict_by_length.size() << endl;
-
-	set<char*, strcompare>::iterator itset;
-	tic();
-	while(true) {
-		int tamanho = gera_tamanho_palavra();
-		//int tamanho = rand() % 5 + 1;
-		char *new_word = gera_palavra(tamanho);
-
-		itset = dict_by_length[tamanho].find(new_word);
-
-		free(new_word);
-
-		if(itset != dict_by_length[tamanho].end()) {
-			founded_by_length[tamanho].insert(*itset);
-			dict_by_length[tamanho].erase(itset);
-			qtd_encontradas++;
-			
-			imprime_prop();
-
-			float prop = qtd_encontradas / (float) total_palavras;
-			if(prop >= 0.5)
-				break;
-		}
-	}
-
-	/*
-		Junta palavras de até 5 letras para gerar palavras maiores
-
-		found_it1 = indice do dicionario de palavras de tamanho i
-		found_it2 = indice do dicionario de palavras de tamanho j
-		
-		palavra_it1 = indice da palavra k do dicionario i
-		palavra_it2 = indice da palavra l do dicionario j
-
-		tam_palavras = 1,2,3,4,5, ... 45
-
-		1 + 1 esta contido tam_palavrras 
-		thread <- (1,1) -> encontrou
-		thread <- (1,2)
-		thread <- (1,45) - X
-
-		thread <- (45, 45)
-
-		thread <- (1,1,1)
-
-		thread <- (_,_,_,0,_,_,_,_,_,_,_) - 45 tamanho	
-	*/
-/*	
-	int nindices = dict_by_length.size();
-	int* indices = (int*) calloc(sizeof(int) * nindices);
-
-	// Copia os tamanhos de palavras disponiveis
-	vector<int> tamanhos;
-	tamanhos.push_back(0);
-	for(MapDict::iterator it=dict_by_length.begin(); it!=dict_by_length.end(); ++it)
-		tamanhos.push_back(it->first);
-
-	//Concatena as palavras ja encontradas
-	int k = 0;
-	while(1) {
-		
-	}
-
-
-*/
-	char* combined[2];
-	int k=0;
-	//combined = (char**) malloc(sizeof(char*) * 2);
-
-	// Inicia todos os iteradores para o primero número de palavras
-	MapDict::iterator it[2];
-	for(int i=0; i<2; i++)
-		it[i] = founded_by_length.begin();
-
-	while(1) {
-		Dict::iterator it_word[2];
-
-		while(1) {
-			for(int i=0; i<2; i++)
-				it_word[i] = it[i]->second.begin();
-
-			int tamanho = it[0]->first + it[1]->first;
-			combined[0] = mystrcat(*it_word[0], *it_word[1]);
-			combined[1] = mystrcat(*it_word[1], *it_word[0]);
-
-			for(int i=0; i<2; i++) {
-				if(dict_by_length[tamanho].find(combined[i]) != dict_by_length[tamanho].end()) { //Verifica se a palavra combinada existe
-					cout << qtd_encontradas << "," << k << " " << tamanho << ": " << combined[i] << endl;
-					qtd_encontradas++;
-					k++;
-					imprime_prop();
-				}
-			}
-
-			free(combined[0]);
-			free(combined[1]);
-		}
-	}
-/*
-	int k=0;
-	for(MapDict::iterator founded_it1=founded_by_length.begin(); 
-	    founded_it1!=founded_by_length.end(); 
-            ++founded_it1) {
-		for(MapDict::iterator founded_it2=founded_by_length.begin(); 
-		    founded_it2!=founded_by_length.end(); 
-		    ++founded_it1) {
-			for(Dict::iterator palavra_it1=founded_it1->second.begin(); 
-			    palavra_it1!=founded_it1->second.end(); 
-			    ++palavra_it1) {
-				for(Dict::iterator palavra_it2=founded_it2->second.begin(); 
-				    palavra_it2!=founded_it2->second.end(); 
-				    ++palavra_it2) {
-					int tamanho = founded_it1->first + founded_it2->first;
-					char* combined1 = mystrcat(*palavra_it1, *palavra_it2);
-					char* combined2 = mystrcat(*palavra_it2, *palavra_it1);
-
-					itset = dict_by_length[tamanho].find(combined1);
-					if(itset != dict_by_length[tamanho].end()) {
-						cout << k << " " << tamanho << " concatenei: " << *palavra_it1 << "+" << *palavra_it2 << endl;
-						k++;
-					}			
-					itset = dict_by_length[tamanho].find(combined2);
-					if(itset != dict_by_length[tamanho].end()) {
-						cout << k << " " << tamanho << " concatenei: " << *palavra_it2 << "+" << *palavra_it1 << endl;
-						k++;
-					}			
-					free(combined1);
-					free(combined2);
-				}
-			}
-		}
-	}
-	*/
+	
 	fclose(arq_palavras);
 	cout << "elapsed time: " << toc() << endl;
 
@@ -223,11 +90,15 @@ void ler_arquivo(const char* filename) {
 
 	//Calcula o tamanho do arquivo
 	fseek(arq_palavras, 0L, SEEK_END);
-	int size = ftell(arq_palavras);
+	int size = ftell(arq_palavras) / n_threads;
 	fseek(arq_palavras, 0L, SEEK_SET);
 
-	text = (char*) malloc (sizeof(char) * size);
-	fread(text, 1, size, arq_palavras);	
+	block = (char**) malloc(sizeof(char*) * n_threads);
+
+	for(int i=0; i<n_threads; i++) {
+		block[i] = (char*) malloc (sizeof(char) * size);
+		fread(block[i], 1, size, arq_palavras);	
+	}
 }
 
 // Calcula a proporcao de palavras com ateh 5 letras
@@ -268,15 +139,34 @@ void init_dict(const char* filename) {
 
 // Parsea as palavras lidas
 void parser() {
-    char *pch = strtok (text, " ,\n");
-                                            
-    //for(int i=0; i<100; i++) {
-    while(pch != NULL){
-    	int length = strlen(pch);
-    	dict_by_length[length].insert(strdup(pch)); //Insere uma copia no dicionario das palavras de tamanho i    
-    	pch = strtok (NULL, " ,\n");                                    
-    }
-                                                                         
+	int my_rank, j, length;
+	char* pch;
+	char* save_ptr;
+/*
+	char** block = (char**) malloc(sizeof(char*) * n_threads);
+	for(i=0; i<n_threads; i++) {
+		block[i] = (char*) malloc((sizeof(text) / 4) + 1);
+		memcpy(block[i], text + i*(sizeof(text) / 4), sizeof(text) / 4);
+	}
+*/
+
+	#pragma omp parallel num_threads(n_threads) \
+		default(none) private(my_rank, j, pch, save_ptr, length) shared(block, dict_by_length)
+	{
+		my_rank = omp_get_thread_num();
+		//printf("Thread %d\n", my_rank);
+		j = 0;
+		pch = strtok_r(block[my_rank], " ,\n", &save_ptr);                                    
+    	//for(int i=0; i<100; i++) {
+   		while(pch != NULL){
+    		length = strlen(pch);
+			//printf("%d - token %d : %s\n", my_rank,j,pch);
+			dict_by_length[length].insert(strdup(pch)); //Insere uma copia no dicionario das palavras de tamanho i    
+    		pch = strtok_r (NULL, " ,\n", &save_ptr);                                   
+			j++;
+    	}                                                                 
+	}
+
     free(text);
 }
 
