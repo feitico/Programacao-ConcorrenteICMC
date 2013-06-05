@@ -7,6 +7,8 @@
 #include <iostream>
 #include <set>
 
+#include "omp.h"
+
 using namespace std;
 
 /* Funcoes auxiliares */
@@ -49,6 +51,8 @@ MapDict dict_by_length; //Dicionario com as palavras ainda nao encontradas
 MapDict founded_by_length; //Dicionario com as palavras ja encontradas
 
 int main(int argc, char* argv[]) {
+	int tamanho;
+	char* new_word;
 
 	//Inicializa o dicionario
 	init_dict(argv[1]);	
@@ -62,27 +66,38 @@ int main(int argc, char* argv[]) {
 
 	set<char*, strcompare>::iterator itset;
 	tic();
-	while(true) {
-		int tamanho = gera_tamanho_palavra();
-		//int tamanho = rand() % 5 + 1;
-		char *new_word = gera_palavra(tamanho);
+	
+	#pragma omp parallel num_threads(3) private(tamanho, new_word, ) shared(founded_by_length, dict_by_length) reduction(+:qtd_encontradas)
+	{
+		unsigned int myseed = omp_get_thread_num();
+		my_rank = omp_get_thread_num();
+		while(true) {
+			if(my_rank == 0)
+				tamanho = rand_r() % 2 + 1;
+			else
+				tamanho = my_rank + 2;
 
-		itset = dict_by_length[tamanho].find(new_word);
+			tamanho = gera_tamanho_palavra();
+			//int tamanho = rand() % 5 + 1;
+			char *new_word = gera_palavra(tamanho);
 
-		free(new_word);
+			itset = dict_by_length[tamanho].find(new_word);
 
-		if(itset != dict_by_length[tamanho].end()) {
-			founded_by_length[tamanho].insert(*itset);
-			dict_by_length[tamanho].erase(itset);
-			qtd_encontradas++;
-			
-			imprime_prop();
+			free(new_word);
 
-			float prop = qtd_encontradas / (float) total_palavras;
-			if(prop >= 0.5)
-				break;
+			if(itset != dict_by_length[tamanho].end()) {
+				founded_by_length[tamanho].insert(*itset);
+				dict_by_length[tamanho].erase(itset);
+				qtd_encontradas++;
+				
+				imprime_prop();
+
+				float prop = qtd_encontradas / (float) total_palavras;
+				if(prop >= 0.5)
+					break;
+			}
 		}
-	}
+	} // Fim da regiao parallela
 
 	/*
 		Junta palavras de até 5 letras para gerar palavras maiores

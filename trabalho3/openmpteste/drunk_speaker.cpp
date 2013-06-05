@@ -54,6 +54,10 @@ int n_threads = 4;
 
 int main(int argc, char* argv[]) {
 
+	if(argc != 3) {
+		cout << "Uso: " << argv[0] << " palavras.txt n_threads" << endl;
+		exit(-1);
+	}
 	n_threads = atoi(argv[2]);
 	omp_set_num_threads(n_threads);
 	//Inicializa o dicionario
@@ -151,7 +155,7 @@ void parser() {
 */
 
 	#pragma omp parallel num_threads(n_threads) \
-		default(none) private(my_rank, j, pch, save_ptr, length) shared(block, dict_by_length)
+		private(my_rank, j, pch, save_ptr, length) shared(block, dict_by_length)
 	{
 		my_rank = omp_get_thread_num();
 		//printf("Thread %d\n", my_rank);
@@ -160,7 +164,7 @@ void parser() {
     	//for(int i=0; i<100; i++) {
    		while(pch != NULL){
     		length = strlen(pch);
-			//printf("%d - token %d : %s\n", my_rank,j,pch);
+			printf("%d - token %d : %s\n", my_rank,j,pch);
 			dict_by_length[length].insert(strdup(pch)); //Insere uma copia no dicionario das palavras de tamanho i    
     		pch = strtok_r (NULL, " ,\n", &save_ptr);                                   
 			j++;
