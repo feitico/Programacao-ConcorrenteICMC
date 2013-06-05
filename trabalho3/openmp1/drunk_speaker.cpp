@@ -18,8 +18,8 @@ void ler_arquivo();// Le todo o arquivo
 void calc_proporcao();// Calcula a proporcao de palavras com ateh 5 letras
 void calc_total_palavras();//Calcula total de palavras
 void init_dict(const char* filename);// Inicializa o dicionario
-int gera_tamanho_palavra();// Gera o tamanho de uma palavra de forma uniforme
-char* gera_palavra(int tamanho, unsigned int my_seed);// Gera uma palavra com um certo tamanho
+int gera_tamanho_palavra(unsigned int *myseed);// Gera o tamanho de uma palavra de forma uniforme
+char* gera_palavra(int tamanho, unsigned int *myseed);// Gera uma palavra com um certo tamanho
 void imprime_prop(); //Imprime a proporcao de palavras encontradas
 void parser();// Parsea as palavras lidas
 char* mystrcat(char* str1, char* str2);// Aloca e concatena duas strings
@@ -40,6 +40,7 @@ FILE *arq_palavras; //Ponteiro para o arquivo
 char* text; // Armazena todo o texto do arquivo
 
 int qtd_palavra[6]; //Qtd de palavras de tamanho 1,2,3,4,5 ( usado para gerar uniformimente essas palavras)
+int total_palavras_pequenas; // Total de palavras ate 5 caracteres
 int total_palavras; //Total de palavras a serem encontradas
 int qtd_encontradas=0; //Total de palavras encontradas
 
@@ -51,10 +52,6 @@ MapDict dict_by_length; //Dicionario com as palavras ainda nao encontradas
 MapDict founded_by_length; //Dicionario com as palavras ja encontradas
 
 int main(int argc, char* argv[]) {
-	int tamanho;
-	char* new_word;
-	float prop;
-
 	if(argc != 2) {
 		cout << "Uso: " << argv[0] << " palavras.txt" << endl;
 		exit(-1);	
@@ -65,51 +62,44 @@ int main(int argc, char* argv[]) {
 	
 	MapDict::iterator it1;
 	for(it1=dict_by_length.begin(); it1!=dict_by_length.end(); ++it1) {
-		cout << it1->first << " : " << it1->second.size() << endl;
+		cout << it1->first << ":" << endl;
+		
+		Dict::iterator itdict;
+		for(itdict = it1->second.begin(); itdict != it1->second.end(); ++itdict)
+			cout << *itdict << endl;
 	}
 	
 	cout << "map size: " << dict_by_length.size() << endl;
 
-	set<char*, strcompare>::iterator itset;
 	tic();
 	
-	#pragma omp parallel num_threads(3) private(tamanho, new_word, itset, prop) \
-		shared(founded_by_length, dict_by_length, total_palavras) reduction(+:qtd_encontradas)
+	#pragma omp parallel num_threads(3) shared(founded_by_length, dict_by_length, total_palavras) reduction(+:qtd_encontradas)
 	{
 		unsigned int myseed = omp_get_thread_num() * time(NULL);
 		int my_rank = omp_get_thread_num();
 		int count=0;
+		int tamanho;
+		char* new_word;
+		float prop;
+		Dict::iterator itset;
 		while(true) {
-			if(my_rank == 0)
-				tamanho = rand_r(&myseed) % 3 + 1;
-			else
-				tamanho = my_rank + 3;
-			                                                		
-                        new_word = (char*) malloc(sizeof(char) * (tamanho));
-                        
-                        for(int i = 0; i < tamanho; i++){
-                        	new_word[i] = ('a' + rand_r(&myseed) % 26);
-                        }
-                        new_word[tamanho] = '\0';
+			tamanho = gera_tamanho_palavra(&myseed);
+			new_word = gera_palavra(tamanho, &myseed);
 
 			itset = dict_by_length[tamanho].find(new_word);
 
 			free(new_word);
 			if(itset != dict_by_length[tamanho].end()) {
-				cout << my_rank << "-achou " << count << ":" << *itset << endl;
 				count++;
 				founded_by_length[tamanho].insert(*itset);
 				dict_by_length[tamanho].erase(itset);
-				if(dict_by_length.empty()) {
-					cout << my_rank << " termineiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii" << endl;
-					break;
-				}
 				qtd_encontradas++;
 				
 				if(my_rank == 0) 
 					imprime_prop();
 
 				prop = qtd_encontradas / (float) total_palavras;
+				cout << my_rank << " prop: " << prop * 100 << endl;
 				if(prop >= 0.5)
 					break;
 			}
@@ -270,6 +260,7 @@ void calc_proporcao() {
 		qtd_palavra[0] += qtd_palavra[i];
 	}
 	cout << "total prop: " << qtd_palavra[0] << endl;
+	total_palavras_pequenas = qtd_palavra[0];
 	total_palavras = qtd_palavra[0]; /* Change it after */
 }
 
@@ -313,8 +304,8 @@ void parser() {
 }
 
 // Gera o tamanho de uma palavra de modo uniforme
-int gera_tamanho_palavra() {
-	int r = rand() % qtd_palavra[0];
+int gera_tamanho_palavra(unsigned int *myseed) {
+	int r = rand_r(myseed) % qtd_palavra[0];
         if(r < qtd_palavra[1])
         	return 1;
         else if(r < qtd_palavra[2])
@@ -328,13 +319,13 @@ int gera_tamanho_palavra() {
 }
 
 // Gera uma palavra com um certo tamanho
-char* gera_palavra(int tamanho, unsigned int my_seed) {
+char* gera_palavra(int tamanho, unsigned int *myseed) {
 	char* str;
 
 	str = (char*) malloc(sizeof(char) * (tamanho));
 	
 	for(int i = 0; i < tamanho; i++){
-		str[i] = ('a' + rand_r(&my_seed) % 26);
+		str[i] = ('a' + rand_r(myseed) % 26);
 	}
 	str[tamanho] = '\0';
 	
