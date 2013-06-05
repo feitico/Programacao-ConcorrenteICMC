@@ -50,7 +50,7 @@ typedef map<int, Dict > MapDict; // Representa um mapa de dicionarios, sendo a c
 MapDict dict_by_length; //Dicionario com as palavras ainda nao encontradas
 MapDict founded_by_length; //Dicionario com as palavras ja encontradas
 
-int n_threads = 4;
+int n_threads;
 
 int main(int argc, char* argv[]) {
 
@@ -164,7 +164,7 @@ void parser() {
     	//for(int i=0; i<100; i++) {
    		while(pch != NULL){
     		length = strlen(pch);
-			printf("%d - token %d : %s\n", my_rank,j,pch);
+			//printf("%d - token %d : %s\n", my_rank,j,pch);
 			dict_by_length[length].insert(strdup(pch)); //Insere uma copia no dicionario das palavras de tamanho i    
     		pch = strtok_r (NULL, " ,\n", &save_ptr);                                   
 			j++;

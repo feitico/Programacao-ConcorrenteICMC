@@ -50,6 +50,10 @@ MapDict founded_by_length; //Dicionario com as palavras ja encontradas
 
 int main(int argc, char* argv[]) {
 
+	if(argc != 2) {
+		cout << "Uso: " << argv[0] << " palavras.txt" << endl;
+		exit(-1);
+	}
 	//Inicializa o dicionario
 	init_dict(argv[1]);	
 	
@@ -60,7 +64,7 @@ int main(int argc, char* argv[]) {
 	
 	cout << "map size: " << dict_by_length.size() << endl;
 
-	set<char*, strcompare>::iterator itset;
+	Dict::iterator itset;
 	tic();
 	while(true) {
 		int tamanho = gera_tamanho_palavra();

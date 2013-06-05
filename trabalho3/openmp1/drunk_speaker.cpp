@@ -19,7 +19,7 @@ void calc_proporcao();// Calcula a proporcao de palavras com ateh 5 letras
 void calc_total_palavras();//Calcula total de palavras
 void init_dict(const char* filename);// Inicializa o dicionario
 int gera_tamanho_palavra();// Gera o tamanho de uma palavra de forma uniforme
-char* gera_palavra(int tamanho);// Gera uma palavra com um certo tamanho
+char* gera_palavra(int tamanho, unsigned int my_seed);// Gera uma palavra com um certo tamanho
 void imprime_prop(); //Imprime a proporcao de palavras encontradas
 void parser();// Parsea as palavras lidas
 char* mystrcat(char* str1, char* str2);// Aloca e concatena duas strings
@@ -53,6 +53,12 @@ MapDict founded_by_length; //Dicionario com as palavras ja encontradas
 int main(int argc, char* argv[]) {
 	int tamanho;
 	char* new_word;
+	float prop;
+
+	if(argc != 2) {
+		cout << "Uso: " << argv[0] << " palavras.txt" << endl;
+		exit(-1);	
+	}
 
 	//Inicializa o dicionario
 	init_dict(argv[1]);	
@@ -67,32 +73,43 @@ int main(int argc, char* argv[]) {
 	set<char*, strcompare>::iterator itset;
 	tic();
 	
-	#pragma omp parallel num_threads(3) private(tamanho, new_word, ) shared(founded_by_length, dict_by_length) reduction(+:qtd_encontradas)
+	#pragma omp parallel num_threads(3) private(tamanho, new_word, itset, prop) \
+		shared(founded_by_length, dict_by_length, total_palavras) reduction(+:qtd_encontradas)
 	{
-		unsigned int myseed = omp_get_thread_num();
-		my_rank = omp_get_thread_num();
+		unsigned int myseed = omp_get_thread_num() * time(NULL);
+		int my_rank = omp_get_thread_num();
+		int count=0;
 		while(true) {
 			if(my_rank == 0)
-				tamanho = rand_r() % 2 + 1;
+				tamanho = rand_r(&myseed) % 3 + 1;
 			else
-				tamanho = my_rank + 2;
-
-			tamanho = gera_tamanho_palavra();
-			//int tamanho = rand() % 5 + 1;
-			char *new_word = gera_palavra(tamanho);
+				tamanho = my_rank + 3;
+			                                                		
+                        new_word = (char*) malloc(sizeof(char) * (tamanho));
+                        
+                        for(int i = 0; i < tamanho; i++){
+                        	new_word[i] = ('a' + rand_r(&myseed) % 26);
+                        }
+                        new_word[tamanho] = '\0';
 
 			itset = dict_by_length[tamanho].find(new_word);
 
 			free(new_word);
-
 			if(itset != dict_by_length[tamanho].end()) {
+				cout << my_rank << "-achou " << count << ":" << *itset << endl;
+				count++;
 				founded_by_length[tamanho].insert(*itset);
 				dict_by_length[tamanho].erase(itset);
+				if(dict_by_length.empty()) {
+					cout << my_rank << " termineiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii" << endl;
+					break;
+				}
 				qtd_encontradas++;
 				
-				imprime_prop();
+				if(my_rank == 0) 
+					imprime_prop();
 
-				float prop = qtd_encontradas / (float) total_palavras;
+				prop = qtd_encontradas / (float) total_palavras;
 				if(prop >= 0.5)
 					break;
 			}
@@ -311,13 +328,13 @@ int gera_tamanho_palavra() {
 }
 
 // Gera uma palavra com um certo tamanho
-char* gera_palavra(int tamanho) {
+char* gera_palavra(int tamanho, unsigned int my_seed) {
 	char* str;
 
 	str = (char*) malloc(sizeof(char) * (tamanho));
 	
 	for(int i = 0; i < tamanho; i++){
-		str[i] = ('a' + rand() % 26);
+		str[i] = ('a' + rand_r(&my_seed) % 26);
 	}
 	str[tamanho] = '\0';
 	
