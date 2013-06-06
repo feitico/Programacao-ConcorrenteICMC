@@ -157,7 +157,7 @@ void ler_arquivo(const char* filename) {
 
 // Calcula a proporcao de palavras com ateh 5 letras
 void calc_proporcao() {
-	for(int i=0; i<7; i++)
+	for(int i=0; i<6; i++)
     	qtd_palavra[i] = 0;
     
     Dict::iterator it;
@@ -167,6 +167,10 @@ void calc_proporcao() {
     		qtd_palavra[0]++;
     	}
     }
+	
+    for(int i=0; i<6; i++)
+        cout << i << ":" << qtd_palavra[i] << endl;
+
 	cout << "total prop: " << qtd_palavra[0] << endl;
     total_palavras = qtd_palavra[0];
 }
