@@ -124,20 +124,16 @@ int main(int argc, char* argv[]) {
         }
     
     cout << "Total: " << qtd_encontradas << endl;
-	return -1;
+	//return -1;
     controle =1;
     total_prop = total_palavras;
 
     int i,j,k;
     char* combined[2];
-	int chunk_init = 0;
-	int chunk_size = total_palavras / 1000;
-	int chunk_end = chunk_init + chunk_size;
 
 	while(true) {
-
         #pragma omp parallel for private(i,j,k, combined) shared(dict) reduction(+ : qtd_encontradas, generate)
-        for(i=chunk_init; i<chunk_end; i++) {
+        for(i=0; i<total_palavras; i++) {
             if(dict[i].marked == true) {
                 for(j=i; j<total_palavras; j++) {
                     if(dict[j].marked == true) {
@@ -145,24 +141,18 @@ int main(int argc, char* argv[]) {
                         combined[1] = mystrcat(dict[j].word, dict[i].word);
 
 						generate++;
-						cout << omp_get_thread_num() << "-" << i << ":" << j << endl; 
+						
                         for(k=0; k<2; k++) {
-                            if(dict_mark(combined[k]) != -1)
+                            if(dict_mark(combined[k]) != -1) {
                                 qtd_encontradas++;
+                                cout << omp_get_thread_num() << "-" <<  qtd_encontradas << endl;
+                            }
                             free(combined[k]);
                         }
                     }
                 }
             }
         }
-		chunk_init = chunk_end+1;
-		chunk_end = chunk_init + chunk_size;
-		
-		cout << generate << ":" << qtd_encontradas << endl;
-		imprime_prop();
-        float prop = qtd_encontradas / (float) total_palavras;
-        if(prop >= 0.6)
-            break;
     } 
 
     cout << "Total: " << qtd_encontradas << endl;
