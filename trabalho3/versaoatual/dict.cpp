@@ -73,9 +73,10 @@ int Dict::markWord(char* word) {
         return -1;
 }
 
-int Dict::markWord(int idx) {
+int Dict::markPos(int idx) {
     if(marked[idx] == 0) {
         marked[idx] = 1;
+		qtdMarked++;
         return 1;
     } else {
         return 0;
