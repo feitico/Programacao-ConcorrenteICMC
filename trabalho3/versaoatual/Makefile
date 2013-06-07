@@ -1,4 +1,4 @@
-CC=g++
+CC=mpicxx
 CFLAGS=-fopenmp -Wall -ansi
 LDFLAGS=$(CFLAGS)
 SRC=$(wildcard *.cpp)

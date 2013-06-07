@@ -65,7 +65,8 @@ int main(int argc, char* argv[]) {
 
 	// Verifica o id
 	if(id == 0) {
-		// Master node	
+		cout << id << endl;
+        // Master node	
 		ifstream entrada(argv[2], ifstream::in);
 		int i,j, answer, proc;
         int word_count, last, found;

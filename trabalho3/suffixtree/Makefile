@@ -1,8 +1,8 @@
-COMPILER = gcc
-DFLAGS = -ansi -pedantic -Wall -g
+COMPILER = g++
+DFLAGS = -ansi -pedantic -Wall
 CFLAGS = -c
 OFLAGS = -o
-EXECNAME = suffixtree
+EXECNAME = main
 
 suffixtree:	main.o suffix_tree.o
 	${COMPILER} ${DFLAGS} main.o suffix_tree.o ${OFLAGS} ${EXECNAME}
@@ -10,8 +10,8 @@ suffixtree:	main.o suffix_tree.o
 suffix_tree.o:	suffix_tree.c suffix_tree.h
 	${COMPILER} ${DFLAGS} ${CFLAGS} suffix_tree.c
 
-main.c:	suffix_tree.h 
-	${COMPILER} ${DFLAGS} ${CFLAGS} main.c 
+main.cpp:	suffix_tree.h 
+	${COMPILER} ${DFLAGS} ${CFLAGS} main.cpp 
 
 clean: 
 	rm *.o 

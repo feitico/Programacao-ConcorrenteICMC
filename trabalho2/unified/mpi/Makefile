@@ -1,4 +1,4 @@
-CC=mpiCC
+CC=mpicxx
 CFLAGS=-Wall -ansi
 SRC=$(wildcard *.cpp)
 EXEC=$(SRC:.cpp=)

@@ -56,6 +56,8 @@ file given as input.
 
 
 /**************************************************************************************************/
+#define STATISTICS 1
+
 int main(int argc, char* argv[])
 {
 	SUFFIX_TREE* tree;

@@ -21,6 +21,9 @@ This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
 *******************************************************************************/
 
+#ifndef _SUFFIXTREE_
+#define _SUFFIXTREE_
+
 /* A type definition for a 32 bits variable - a double word. */
 #define     DBL_WORD      unsigned long   
 
@@ -155,3 +158,5 @@ void ST_DeleteTree(SUFFIX_TREE* tree);
 */
 
 DBL_WORD ST_SelfTest(SUFFIX_TREE* tree);
+
+#endif
