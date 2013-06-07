@@ -33,8 +33,8 @@ void calc_totalPalavras();//Calcula total de palavras
 void loadDict(const char* filename);// Inicializa o dicionario
 
 
-int gera_tamanho_palavra(unsigned int &myseed, struct drand48_data &buffer);// Gera o tamanho de uma palavra de forma uniforme
-char* gera_palavra(int tamanho, unsigned int &myseed, struct drand48_data &buffer);// Gera uma palavra com um certo tamanho
+int gera_tamanho_palavra(struct drand48_data &buffer);// Gera o tamanho de uma palavra de forma uniforme
+char* gera_palavra(int tamanho,struct drand48_data &buffer);// Gera uma palavra com um certo tamanho
 void imprime_prop(); //Imprime a proporcao de palavras encontradas
 void parser();// Parsea as palavras lidas
 char* mystrcat(const char* str1,const char* str2);
@@ -42,37 +42,71 @@ int entryCompare( const void * a, const void * b); //Compara duas entrys
 int dict_mark(const char* word); // Marca uma palavra no dicionario
 void seed_rand(int thread_n, struct drand48_data *buffer);
 char *mysubstr(char *str, int begin, int end);
-int binary_search(char** dict, const char* word);
-
-void master()
-{
-    cout << "I'm the master" << endl;
-}
-
-void worker()
-{
-    cout << "I'm the worker" << endl;
-}
-
 
 int main(int argc, char* argv[]) {
     MPI::Status mpi_status;
+	double start, end;
 
     MPI::Init(argc, argv);
 
     int id = MPI::COMM_WORLD.Get_rank();
     int numprocs = MPI::COMM_WORLD.Get_size();
 
+	MPI::COMM_WORLD.Barrier();
+	start = MPI::Wtime();
+
+	/*
+	
+	Carrega o dicionario em todos os nos
+	
+	*/
+	loadDict(argv[1]);
     if(id == 0) {
-        loadDict(argv[1]);
-        master();
+        //master();
+		/* 
+        
+        Thread 0 se comunica com os outros nos
+		Thread 1 gera palavras de 1 a 3 letras
+		Thread 2 gera palavras de 4 letras
+		Thread 3 gera palavras de 5 letras
+        
+        
+        */
+		#pragma omp parallel default(none)
+		{
+			int thread_id = omp_get_thread_num();
+			struct drand48_data drand_buffer;
+			seed_rand(thread_id, &drand_buffer);
+
+	//		while(true) {
+				
+				/* 
+				
+				Thread 0 se comunica com os outros nos 
+				
+				
+				*/
+				
+	//		}
+		}
+
+		//cout << id << ":" << shortDict.getQtd() << "-" << compoundDict.getQtd() << endl;
     } else {
-        worker();
+        //worker();
+		//cout << id << ":" << shortDict.getQtd() << "-" << compoundDict.getQtd() << endl;
+		//cout << "worker" << endl;
     }
 
+	MPI::COMM_WORLD.Barrier();
+	end = MPI::Wtime();
+	
 	MPI::Finalize();
 
-	cout << "elapsed time: " << toc() << endl;
+	
+	if(id == 0) {
+		cout << "Runtime = " << end - start << endl;
+	}
+
 	return 0;
 }
 
@@ -118,7 +152,7 @@ void count_words() {
     shortDict.init(dictShortQtd, MAX_SHORT_SIZE);
     compoundDict.init(dictCompoundQtd, MAX_COMPOUND_SIZE);
 
-    cout << dictShortQtd << endl << dictCompoundQtd << endl << totalPalavras << endl;
+    //cout << dictShortQtd << endl << dictCompoundQtd << endl << totalPalavras << endl;
     text = temp;
 }
 
@@ -146,13 +180,9 @@ void readDictFile(const char* filename) {
 
 // Inicializa o dicionario
 void loadDict(const char* filename) {
-	tic();
 	readDictFile(filename);
-	cout << "leitura: " << toc() << endl;
 
-	tic();
 	parser();
-	cout << "parser: " << toc() << endl;
 }
 
 // Parsea as palavras lidas
@@ -173,9 +203,7 @@ void parser() {
 }
 
 // Gera o tamanho de uma palavra de modo uniforme
-int gera_tamanho_palavra(unsigned int &myseed, struct drand48_data &buffer) {
-	//int r = rand_r(&myseed) % qtd_palavra[0];
-	//int r = rand() % qtd_palavra[0];
+int gera_tamanho_palavra(struct drand48_data &buffer) {
 	double temp;
 	drand48_r(&buffer, &temp);
 	int r = temp * qtd_palavra[0];
@@ -192,7 +220,7 @@ int gera_tamanho_palavra(unsigned int &myseed, struct drand48_data &buffer) {
 }
 
 // Gera uma palavra com um certo tamanho
-char* gera_palavra(int tamanho, unsigned int &myseed, struct drand48_data &buffer)  {
+char* gera_palavra(int tamanho, struct drand48_data &buffer)  {
 	char* str;
 	double temp;
 
