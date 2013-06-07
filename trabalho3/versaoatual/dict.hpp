@@ -18,6 +18,7 @@ class Dict
 
         void insert(int pos, char* word);
         int markWord(char* word);
+        int markWord(int pos);
         void print();
         
         char** getWords();

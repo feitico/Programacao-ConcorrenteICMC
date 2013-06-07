@@ -16,12 +16,16 @@ int binary_search(char** words, const char* word, int qtd)
         int imid = (imin + imax) / 2;
                                                             
         // Decide em qual sub array para procurar
-        if(strcmp(words[imid], word) < 0)
-            imin = imid + 1;
-        else if (strcmp(words[imid], word) > 0)
-            imax = imid - 1;
-        else
-            return imid;
+        if(strlen(words[imid]) == 0)
+                imax = imid - 1;
+        else {
+            if(strcmp(words[imid], word) < 0)
+                imin = imid + 1;
+            else if (strcmp(words[imid], word) > 0)
+                imax = imid - 1;
+            else
+                return imid;
+        }
     }
     return -1;
 }
@@ -57,16 +61,25 @@ void Dict::insert(int pos, char* word) {
 }
 
 int Dict::markWord(char* word) {
-    int indice = binary_search(words, word, qtd);
-    if(indice != -1) {
-        if(marked[indice] != 0) {
-            marked[indice] = 1;
+    int idx = binary_search(words, word, qtd);
+    if(idx != -1) {
+        if(marked[idx] == 0) {
+            marked[idx] = 1;
             qtdMarked++;
-            return indice;
+            return idx;
         } else
             return -1;
     } else 
         return -1;
+}
+
+int Dict::markWord(int idx) {
+    if(marked[idx] == 0) {
+        marked[idx] = 1;
+        return 1;
+    } else {
+        return 0;
+    }
 }
 
 void Dict::print()

@@ -13,6 +13,9 @@
 #include "utils.h"
 #include "dict.hpp"
 
+#define TAG_SHORT 7
+#define GENERATE 10
+
 using namespace std;
 
 Dict shortDict;
@@ -21,7 +24,7 @@ Dict compoundDict;
 int qtd_palavra[6]; //Qtd de palavras de tamanho 1,2,3,4,5 ( usado para gerar uniformimente essas palavras)
 int totalPalavras; //Total de palavras a serem encontradas
 int total_prop;
-int qtd_encontradas=0; //Total de palavras encontradas
+//int qtd_encontradas=0; //Total de palavras encontradas
 
 int controle=1;
 
@@ -35,13 +38,14 @@ void loadDict(const char* filename);// Inicializa o dicionario
 
 int gera_tamanho_palavra(struct drand48_data &buffer);// Gera o tamanho de uma palavra de forma uniforme
 char* gera_palavra(int tamanho,struct drand48_data &buffer);// Gera uma palavra com um certo tamanho
-void imprime_prop(); //Imprime a proporcao de palavras encontradas
+//void imprime_prop(); //Imprime a proporcao de palavras encontradas
 void parser();// Parsea as palavras lidas
 char* mystrcat(const char* str1,const char* str2);
 int entryCompare( const void * a, const void * b); //Compara duas entrys
 int dict_mark(const char* word); // Marca uma palavra no dicionario
 void seed_rand(int thread_n, struct drand48_data *buffer);
 char *mysubstr(char *str, int begin, int end);
+double myrand(struct drand48_data &buffer);
 
 int main(int argc, char* argv[]) {
     MPI::Status mpi_status;
@@ -50,7 +54,7 @@ int main(int argc, char* argv[]) {
     MPI::Init(argc, argv);
 
     int id = MPI::COMM_WORLD.Get_rank();
-    int numprocs = MPI::COMM_WORLD.Get_size();
+    //int numprocs = MPI::COMM_WORLD.Get_size();
 
 	MPI::COMM_WORLD.Barrier();
 	start = MPI::Wtime();
@@ -63,7 +67,21 @@ int main(int argc, char* argv[]) {
 	loadDict(argv[1]);
     if(id == 0) {
         //master();
-		/* 
+        int qtd_encontradas = 0;
+        int idx_encontrados[3][GENERATE];
+	
+        cout << "master before recv" << endl;
+        // Recebe as palavras encontradas pelos nos 1,2 e 3
+        for(int i=1; i<=3; i++) {
+            MPI::COMM_WORLD.Recv(idx_encontrados[i], GENERATE, MPI::INT, i, TAG_SHORT);
+
+            for(int j=0; j<GENERATE; j++)
+                qtd_encontradas += shortDict.markWord(idx_encontrados[i][j]);
+        }
+
+        cout << "master: " << qtd_encontradas << endl;
+        
+        /* 
         
         Thread 0 se comunica com os outros nos
 		Thread 1 gera palavras de 1 a 3 letras
@@ -72,7 +90,8 @@ int main(int argc, char* argv[]) {
         
         
         */
-		#pragma omp parallel default(none)
+		/*
+        #pragma omp parallel default(none)
 		{
 			int thread_id = omp_get_thread_num();
 			struct drand48_data drand_buffer;
@@ -80,21 +99,51 @@ int main(int argc, char* argv[]) {
 
 	//		while(true) {
 				
-				/* 
 				
 				Thread 0 se comunica com os outros nos 
 				
 				
-				*/
 				
-	//		}
+			}
 		}
-
 		//cout << id << ":" << shortDict.getQtd() << "-" << compoundDict.getQtd() << endl;
+        */
     } else {
         //worker();
-		//cout << id << ":" << shortDict.getQtd() << "-" << compoundDict.getQtd() << endl;
-		//cout << "worker" << endl;
+		
+        //Node 1 gera palavras de tamanho 1 a 3
+        //Node 2 gera palavras de tamanho 4
+        //Node 3 gera palavras de tamanho 5
+
+        int qtd_encontradas=0;
+        int tamanho;
+
+        if(id <= 3) {
+            cout << "node " << id << " before generate" << endl;
+            int idx_encontrados[GENERATE];
+            #pragma omp parallel
+            {
+                int thread_id = omp_get_thread_num();
+                struct drand48_data drand_buffer;
+                #pragma omp for reduction(+:qtd_encontradas) private(tamanho)
+                for(int i=0; i<GENERATE; i++) {
+                    if(id == 1) {
+                        tamanho = myrand(drand_buffer) * 3; //Tamanhos de 1 a 3
+                    } else {
+                        tamanho = id + 2; // no 2 - tamanho 4, no 3 - tamanho 5
+                    }
+
+                    char* new_word = gera_palavra(tamanho, drand_buffer);
+                   
+                    cout << id << ":" << thread_id << " = " << new_word << endl;
+                    idx_encontrados[i] = shortDict.markWord(new_word);
+
+                    free(new_word);
+                }
+            }
+            MPI::COMM_WORLD.Send(idx_encontrados, GENERATE, MPI::INT, 0, TAG_SHORT); 
+            cout << "worker " << id << ": " << qtd_encontradas << endl; 
+        }
     }
 
 	MPI::COMM_WORLD.Barrier();
@@ -131,7 +180,6 @@ void count_words() {
     char *temp = text;
     char *pch = strtok (text, "\n");
     int length;
-    int count=0;
     
     for(int i=0; i<6; i++)
     	qtd_palavra[i] = 0;
@@ -219,6 +267,12 @@ int gera_tamanho_palavra(struct drand48_data &buffer) {
         	return 5;
 }
 
+double myrand(struct drand48_data &buffer) {
+    double temp;
+    drand48_r(&buffer, &temp);
+    return temp;
+}
+
 // Gera uma palavra com um certo tamanho
 char* gera_palavra(int tamanho, struct drand48_data &buffer)  {
 	char* str;
@@ -236,7 +290,7 @@ char* gera_palavra(int tamanho, struct drand48_data &buffer)  {
 	
 	return str;
 }
-
+/*
 //Imprime a proporcao de palavras encontradas
 void imprime_prop() {
 
@@ -272,7 +326,7 @@ void imprime_prop() {
     	cout << qtd_encontradas << " - 100% encontrado: " << toc() << endl;
 	}
 }
-
+*/
 void seed_rand(int thread_n, struct drand48_data *buffer)
 {
 	struct timeval tv;
