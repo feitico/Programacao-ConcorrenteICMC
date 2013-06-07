@@ -379,7 +379,7 @@ void patricia::print(int n) const
 	if (left) left->print(n+4);
 };
 
-
+/*
 int main(){
 	char* s;
 	patricia* tree=new patricia;
@@ -406,7 +406,11 @@ int main(){
 	s = (char*)malloc(sizeof(char)*12); strcpy(s,"australia");   tree->add(s,NULL); assert(0==tree->validate());
 	s = (char*)malloc(sizeof(char)*12); strcpy(s,"europa");      tree->add(s,NULL); assert(0==tree->validate());
 	s = (char*)malloc(sizeof(char)*12); strcpy(s,"antartica");   tree->add(s,NULL); assert(0==tree->validate());
-	
+
+	tree->printcompact();
+	printf("\n");
+	tree->print();
+
 	assert(0==strcmp("asia",tree->maxmatch("asian")->getkey()));
 	tree->del("europa");      assert(0==tree->validate());
 	tree->del("africa");      assert(0==tree->validate());
@@ -443,5 +447,5 @@ int main(){
 	};
 	return 0;
 };
-
+*/
 //#endif
