@@ -83,7 +83,7 @@ int main(int argc, char* argv[]) {
 			imprime_prop();
 
 			float prop = qtd_encontradas / (float) total_palavras;
-			if(prop >= 0.5)
+			if(prop >= 1.0)
 				break;
 		}
 	}

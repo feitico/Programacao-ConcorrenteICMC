@@ -14,7 +14,7 @@
 #include "dict.hpp"
 
 #define TAG_SHORT 7
-#define GENERATE 100000
+#define CHUNK_SIZE_DEFAULT 100000
 
 using namespace std;
 
@@ -37,35 +37,33 @@ void calc_totalPalavras();//Calcula total de palavras
 void loadDict(const char* filename);// Inicializa o dicionario
 
 
-int gera_tamanho_palavra(struct drand48_data &buffer);// Gera o tamanho de uma palavra de forma uniforme
-char* gera_palavra(int tamanho,struct drand48_data &buffer);// Gera uma palavra com um certo tamanho
+int gera_tamanho_palavra(unsigned short xsubi[3]);// Gera o tamanho de uma palavra de forma uniforme
+char* gera_palavra(int tamanho, unsigned short xsubi[3]);// Gera uma palavra com um certo tamanho
 //void imprime_prop(); //Imprime a proporcao de palavras encontradas
 void parser();// Parsea as palavras lidas
 char* mystrcat(const char* str1,const char* str2);
 int entryCompare( const void * a, const void * b); //Compara duas entrys
 int dict_mark(const char* word); // Marca uma palavra no dicionario
-void seed_rand(int thread_n, struct drand48_data *buffer);
 char *mysubstr(char *str, int begin, int end);
-double myrand(struct drand48_data &buffer);
 void readText(const char* filename); //Le o arquivo inteiro
 void initDict(); // Inicializa o dicionario
-void generateWords(int id, int qtd, int debug); //Gera palavras com ate 5 letras de forma aleatoria
+void generateWords(int id, int qtd); //Gera palavras com ate 5 letras de forma aleatoria
 void imprime_prop(int &controle, int qtdMarked, int total);
 
 int main(int argc, char* argv[]) {
-    MPI::Status mpi_status;
-	double start, end;
-    int porcent;
-    int chunkSize;
+	double start, end; //Calcula o tempo de inicio da execucao
+    int porcent; //Porcentagem a ser calculada
+    int chunkSize; //Gera tantas palavras aleatorias
 
-    if(argc != 4) {
-        cout << "Uso: " << argv[0] << " palavras.txt porcentagem chunkSize" << endl;
+    if(argc != 3) {
+        cout << "Uso: " << argv[0] << " palavras.txt porcentagem" << endl;
         exit(-1);
     }
     porcent = atoi(argv[2]);
-    chunkSize = atoi(argv[3]);
+    chunkSize = CHUNK_SIZE_DEFAULT;
 
     MPI::Init(argc, argv);
+    srand(time(NULL));
 
     int id = MPI::COMM_WORLD.Get_rank();
     //int numprocs = MPI::COMM_WORLD.Get_size();
@@ -89,35 +87,30 @@ int main(int argc, char* argv[]) {
 	    text = (char*) malloc (sizeof(char) * filesize);
     }
 
+    //Envia o conteudo do texto para todos os nos
     MPI::COMM_WORLD.Bcast(text, filesize, MPI::CHAR, 0); // qtd de palavras    
 
+    //Inicializa o dicionario
     initDict(); //Todos os nos possuem os mesmo dicionarios
-    
-    //Passo 1 - Gerar palavras ate 5 letras
+
+    //Passo 1 - Gerar palavras de ate 5 letras
     int qtd = shortDict.getQtd();
     int* reduced = (int*) malloc(sizeof(int) * qtd);
     int controle=1;
-    int debug = 0;
     tic(); //Conta o tempo para achar as palavras
     for(;;) {
-        generateWords(id, chunkSize, debug);
+        generateWords(id, chunkSize); // Gera n palavras
 
-        // Junta as marcacoes das palavras de todos os nos
-        //int beforeMarked = shortDict.getQtdMarked();
-
-        MPI::COMM_WORLD.Allreduce(shortDict.getMarked() , reduced, qtd, MPI::INT, MPI::LOR);
+        // Realiza um OR com todos os blocos marcados
+        MPI::COMM_WORLD.Allreduce(shortDict.getMarked(), reduced, qtd, MPI::INT, MPI::LOR);
   
+        // Realiza a marcacao em todos os dicionarios
         shortDict.setMarked(reduced);
 
-        if(shortDict.getQtdMarked() == 8096)
-            debug = 1;
-
+        // Imprime a porcentagem ja alcancada
         if(id == 0) {
             imprime_prop(controle, shortDict.getQtdMarked(), qtd);
             float prop = shortDict.getQtdMarked() / (float) qtd;
-            if(shortDict.getQtdMarked() == 8096) {
-                shortDict.print(0);
-            }
             
             if(prop*100 >= porcent) {//Calcula somente ateh tal porcentagem
                 break;
@@ -125,34 +118,65 @@ int main(int argc, char* argv[]) {
 //          cout << beforeMarked << ":" << shortDict.getQtdMarked() << endl;
         }
     }
-    free(reduced);
+  
     //Passo 2 - Concatenar palavras de ate 5 letras para gerar palavras maiores
-    /*
-    int i,j,k;
-    char* combined[2];
-                                                                        
-    for(i=0;i<total_palavras; i++) {
-        if(dict[i].marked == true) {
-            for(j=i; j<total_palavras; j++) {
-                if(dict[j].marked == true) {
-                    combined[0] = mystrcat(dict[i].word, dict[j].word);
-                    combined[1] = mystrcat(dict[j].word, dict[i].word);
-                                                                        
-                    for(k=0; k<2; k++) {
-                        if(dict_mark(combined[k]) != -1) {
-                            qtd_encontradas++;
-                            if(qtd_encontradas == 20000)
-                                break;
-                            
-                                imprime_prop();
-                            }
-                        }
-                        free(combined[k]);
+    controle=1;
+    if(id == 0) {
+        char** compoundWords = compoundDict.getWords();
+        char* currentWord;
+        int length;
+        int begin=0;
+        int substrLen=5;
+        char substr[46];
+        qtd=compoundDict.getQtd();
+
+        for(int i=0;i<qtd; i++) {
+            currentWord = compoundWords[i];
+            length = strlen(currentWord);
+            begin=0;
+            substrLen=5;
+            //for(int j=0;j<length; j++)
+            //    cout << j;
+   //         cout << currentWord << " = ";
+            for(;;) {
+                //get the first substring
+            //    cout << begin << "+" << substrLen << "=" << begin+substrLen << " ? " << length << endl;
+                memcpy(substr, currentWord + begin, substrLen);
+                substr[substrLen] = '\0';
+              
+                if(shortDict.search(substr) != NOT_FOUND) {
+     //               cout << substr << " ";
+                    begin = begin + substrLen;
+                    if(begin+5 >= length)
+                        substrLen = length - begin;
+                    else
+                        substrLen = 5;
+                } else {
+                    substrLen--;
+                    if(substrLen == 0) {
+                        begin++;
+                        if(begin+5 >= length)
+                            substrLen = length - begin;
+                        else
+                            substrLen = 5;
                     }
+                }
+                if(begin >= length) {
+                    compoundDict.markPos(i);
+       //             cout << endl;
+                    break;
+                }
+            }
+
+            imprime_prop(controle, compoundDict.getQtdMarked(), compoundDict.getQtd());
+            float prop = compoundDict.getQtdMarked() / (float) compoundDict.getQtd();
+            
+            if(prop*100 >= porcent) {//Calcula somente ateh tal porcentagem
+                break;
             }
         }
     }
-    */
+    free(reduced);
     MPI::COMM_WORLD.Barrier();
 	end = MPI::Wtime();
 	MPI::Finalize();
@@ -206,7 +230,7 @@ void count_words() {
 
     shortDict.init(dictShortQtd, MAX_SHORT_SIZE);
     compoundDict.init(dictCompoundQtd, MAX_COMPOUND_SIZE);
-    cout << qtdPrefix << endl;
+    //cout << qtdPrefix << endl;
 }
 
 void readText(const char* filename) {
@@ -261,15 +285,9 @@ void parser() {
                                                                          
 }
 
-double myrand(struct drand48_data &buffer) {
-    double temp;
-    drand48_r(&buffer, &temp);
-    return temp;
-}
-
 // Gera o tamanho de uma palavra de modo uniforme
-int gera_tamanho_palavra(struct drand48_data &buffer) {
-    int r = myrand(buffer) * qtd_palavra[0];
+int gera_tamanho_palavra(unsigned short xsubi[3]) {
+    int r = nrand48(&xsubi[0]) % qtd_palavra[0];
     if(r < qtd_palavra[1])
     	return 1;
     else if(r < qtd_palavra[2])
@@ -283,13 +301,13 @@ int gera_tamanho_palavra(struct drand48_data &buffer) {
 }
 
 // Gera uma palavra com um certo tamanho
-char* gera_palavra(int tamanho, struct drand48_data &buffer)  {
+char* gera_palavra(int tamanho, unsigned short xsubi[3])  {
 	char* str;
 
 	str = (char*) malloc(sizeof(char) * (tamanho));
 	
 	for(int i = 0; i < tamanho; i++){
-		str[i] = ('a' + myrand(buffer) * 26);
+		str[i] = ('a' + nrand48(&xsubi[0]) % 26);
 	}
 	str[tamanho] = '\0';
 	
@@ -340,14 +358,6 @@ void imprime_prop(int &controle, int qtdMarked, int total) {
 	}
 }
 
-void seed_rand(int thread_n, struct drand48_data *buffer)
-{
-	struct timeval tv;
-
-	gettimeofday(&tv, NULL);
-	srand48_r(tv.tv_sec * thread_n + tv.tv_usec, buffer);
-}
-
 char *mysubstr(char *str, int begin, int end) {
     int length = end - begin + 1;
     char* sub = (char*) malloc(sizeof(char) * (length + 1));
@@ -357,43 +367,30 @@ char *mysubstr(char *str, int begin, int end) {
 }
 
 //Gera palavras com ate 5 letras de forma aleatoria
-void generateWords(int id, int qtd, int debug) {
+void generateWords(int id, int qtd) {
     int qtd_encontradas=0;
-    #pragma omp parallel default(none) shared(id, qtd_encontradas, qtd, shortDict, qtd_palavra, debug, cout) 
+    #pragma omp parallel default(none) shared(id, qtd_encontradas, qtd, shortDict, qtd_palavra, cout) 
     {
-        int thread_id = omp_get_thread_num();
-        struct drand48_data drand_buffer;
-    	seed_rand(id*17 + thread_id*13, &drand_buffer);
         int tamanho;
         char new_word[6];
 
         int gerar_tamanho[6]; //Indica se ainda precisamos gerar tal tamanho
         for(int i=1; i<6; i++) {
             gerar_tamanho[i] = !(shortDict.getQtdMarkedLength(i) == qtd_palavra[i]);
-            if(id == 0) 
-                if(debug == 1)
-                    if(gerar_tamanho[i] == 1)
-                        cout << "tamanhos restantes: " << i << endl;
-            //cout << "gerar tamanho? " << i << ":" << gerar_tamanho[i] << endl;
         }
-
-        #pragma omp for reduction(+:qtd_encontradas) private(tamanho, new_word)
+        unsigned short seed[3] = {rand() % 1024, rand() % 1024, rand() % 1024};
+        #pragma omp parallel for reduction(+:qtd_encontradas) private(tamanho, new_word)
         for(int i=0; i<qtd; i++) {
-            // So gera tamanho de palavras ainda nao encontradas
-            
+            // So gera tamanho de palavras ainda nao encontradas   
             do {
-                tamanho = gera_tamanho_palavra(drand_buffer);// myrand(drand_buffer) * 5 + 1;
-                //cout << tamanho << " " << gerar_tamanho[tamanho] << endl;
+                tamanho = gera_tamanho_palavra(seed);// myrand(drand_buffer) * 5 + 1;
             } while(!gerar_tamanho[tamanho]);
-            
-            
-            //tamanho = gera_tamanho_palavra(drand_buffer);
+             
             for(int j=0; j<tamanho; j++)
-		        new_word[j] = ('a' + myrand(drand_buffer) * 26);
+		        new_word[j] = ('a' + nrand48(&seed[0]) % 26);
             new_word[tamanho] = '\0';
 
-//            char* new_word = gera_palavra(tamanho, drand_buffer);
-//            cout << new_word << endl;
+//           char* new_word = gera_palavra(tamanho, drand_buffer);
            
             if(shortDict.markWord(new_word) != NOT_FOUND) {
     			qtd_encontradas++;

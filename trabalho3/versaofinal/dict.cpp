@@ -78,6 +78,10 @@ int Dict::markWord(char* word) {
         return NOT_FOUND;
 }
 
+int Dict::search(char* word) {
+    return binary_search(words, word, qtd);
+}
+
 int Dict::markPos(int idx) {
 	if(idx < qtd) {
 		if(marked[idx] == 0) {

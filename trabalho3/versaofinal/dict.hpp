@@ -21,6 +21,8 @@ class Dict
         void insert(int pos, char* word);
         int markWord(char* word);
         int markPos(int pos);
+
+        int search(char* word);
         void print(int marked);
         
         char** getWords();

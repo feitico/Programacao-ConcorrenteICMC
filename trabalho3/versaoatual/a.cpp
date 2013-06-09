@@ -69,7 +69,6 @@ int main(int argc, char* argv[]) {
 	init_dict(argv[1]);	
 	//Gera as palavras com até cinco letras
     total_prop = qtd_palavra[0];
-	cout << qtd_palavra[0] << endl;
 	tic();
 
         while(true) {
