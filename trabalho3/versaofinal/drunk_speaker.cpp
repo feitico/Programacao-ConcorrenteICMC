@@ -13,7 +13,6 @@
 #include "utils.h"
 #include "dict.hpp"
 
-#define TAG_SHORT 7
 #define CHUNK_SIZE_DEFAULT 100000
 
 using namespace std;
@@ -23,37 +22,38 @@ Dict compoundDict;
 
 int qtd_palavra[6]; //Qtd de palavras de tamanho 1,2,3,4,5 ( usado para gerar uniformimente essas palavras)
 int totalPalavras; //Total de palavras a serem encontradas
-int total_prop;
 //int qtd_encontradas=0; //Total de palavras encontradas
 
 char* text;
 int filesize; // tamanho do arquivo
 
 /* Funcoes auxiliares */
-void readDictFile();// Le todo o arquivo
-void calc_proporcao();// Calcula a proporcao de palavras com ateh 5 letras
-void calc_totalPalavras();//Calcula total de palavras
-
-void loadDict(const char* filename);// Inicializa o dicionario
-
-
 int gera_tamanho_palavra(unsigned short xsubi[3]);// Gera o tamanho de uma palavra de forma uniforme
-char* gera_palavra(int tamanho, unsigned short xsubi[3]);// Gera uma palavra com um certo tamanho
-//void imprime_prop(); //Imprime a proporcao de palavras encontradas
 void parser();// Parsea as palavras lidas
-char* mystrcat(const char* str1,const char* str2);
-int entryCompare( const void * a, const void * b); //Compara duas entrys
-int dict_mark(const char* word); // Marca uma palavra no dicionario
-char *mysubstr(char *str, int begin, int end);
+
 void readText(const char* filename); //Le o arquivo inteiro
 void initDict(); // Inicializa o dicionario
+
 void generateWords(int id, int qtd); //Gera palavras com ate 5 letras de forma aleatoria
 void imprime_prop(int &controle, int qtdMarked, int total);
 
 int main(int argc, char* argv[]) {
-	double start, end; //Calcula o tempo de inicio da execucao
     int porcent; //Porcentagem a ser calculada
     int chunkSize; //Gera tantas palavras aleatorias
+    int id; // Id do no
+    int numprocs; // Numero de nos
+    int qtd; // Qtd de palavras nos dicionarios
+    int* reduced; // Utilizado para o MPI_Allreduce
+    int controle; // controla a impressao das porcentagem concluidas
+    char** compoundWords; //Armazena as palavras compostas
+    char* currentWord; //Palavra atual a ser composta
+    int length; //Tamanho da palavra atual a ser composta
+    int begin; //Posicao inicial para a composicao da palavra
+    int substrLen; //Tamanho da substr a compor uma palavra maior
+    char substr[6]; //Armazena a substring da palavra a ser composta
+    int tamanho_bloco; //Tamanho do bloco de palavras que seram compostas por um no
+    int inicio_bloco; //Inicio do bloco para um determinado no
+    int fim_bloco; //Fim do bloco para um determinado no
 
     if(argc != 3) {
         cout << "Uso: " << argv[0] << " palavras.txt porcentagem" << endl;
@@ -65,18 +65,16 @@ int main(int argc, char* argv[]) {
     MPI::Init(argc, argv);
     srand(time(NULL));
 
-    int id = MPI::COMM_WORLD.Get_rank();
-    //int numprocs = MPI::COMM_WORLD.Get_size();
+    id = MPI::COMM_WORLD.Get_rank();
+    numprocs = MPI::COMM_WORLD.Get_size();
 
 	MPI::COMM_WORLD.Barrier();
-	start = MPI::Wtime();
+	tic(); // Marca o tempo inicial
     
     if(id == 0) {
 	    readText(argv[1]); //Somente o master le o arquivo inteiro
 
-    	end = MPI::Wtime();
-
-		cout << "read file time: " << end - start << endl;
+//		cout << "read file time: " << toc() << endl;
     }
 
     //Envia o tamanho do buffer para todos os processadores
@@ -89,115 +87,126 @@ int main(int argc, char* argv[]) {
 
     //Envia o conteudo do texto para todos os nos
     MPI::COMM_WORLD.Bcast(text, filesize, MPI::CHAR, 0); // qtd de palavras    
-
     //Inicializa o dicionario
     initDict(); //Todos os nos possuem os mesmo dicionarios
 
     //Passo 1 - Gerar palavras de ate 5 letras
-    int qtd = shortDict.getQtd();
-    int* reduced = (int*) malloc(sizeof(int) * qtd);
-    int controle=1;
-    tic(); //Conta o tempo para achar as palavras
+    qtd = shortDict.getQtd();
+    reduced = (int*) malloc(sizeof(int) * qtd);
+    controle=1;
+	/*********************************************************************
+	Passo 1 - Gerar palavras com ate 5 letras
+	Todos os nos geram palavras aleatorias
+	É utilizado a operacao ALLREDUCE com a operação OR,
+	desse modo, apos chunkSize de palavras geradas todos os nos sabem
+	quais palavras ja foram geradas
+	**********************************************************************/
     for(;;) {
         generateWords(id, chunkSize); // Gera n palavras
-
         // Realiza um OR com todos os blocos marcados
         MPI::COMM_WORLD.Allreduce(shortDict.getMarked(), reduced, qtd, MPI::INT, MPI::LOR);
-  
+ 
         // Realiza a marcacao em todos os dicionarios
         shortDict.setMarked(reduced);
 
-        // Imprime a porcentagem ja alcancada
+        // Master - Imprime a porcentagem ja alcancada de palavras com ate 5 letras
         if(id == 0) {
             imprime_prop(controle, shortDict.getQtdMarked(), qtd);
-            float prop = shortDict.getQtdMarked() / (float) qtd;
-            
-            if(prop*100 >= porcent) {//Calcula somente ateh tal porcentagem
-                break;
-            }
-//          cout << beforeMarked << ":" << shortDict.getQtdMarked() << endl;
+		}
+		float prop = shortDict.getQtdMarked() / (float) qtd;
+           
+        if(prop*100 >= porcent) {//Calcula somente ateh tal porcentagem
+        	break;
         }
     }
-  
-    //Passo 2 - Concatenar palavras de ate 5 letras para gerar palavras maiores
-    controle=1;
-    if(id == 0) {
-        char** compoundWords = compoundDict.getWords();
-        char* currentWord;
-        int length;
-        int begin=0;
-        int substrLen=5;
-        char substr[46];
-        qtd=compoundDict.getQtd();
+    free(reduced);
 
-        for(int i=0;i<qtd; i++) {
-            currentWord = compoundWords[i];
-            length = strlen(currentWord);
-            begin=0;
-            substrLen=5;
-            //for(int j=0;j<length; j++)
-            //    cout << j;
-   //         cout << currentWord << " = ";
-            for(;;) {
-                //get the first substring
-            //    cout << begin << "+" << substrLen << "=" << begin+substrLen << " ? " << length << endl;
-                memcpy(substr, currentWord + begin, substrLen);
-                substr[substrLen] = '\0';
-              
-                if(shortDict.search(substr) != NOT_FOUND) {
-     //               cout << substr << " ";
-                    begin = begin + substrLen;
+	/*********************************************************************
+	Passo 2 - Compor palavras de mais de 5 letras
+
+    Cada no ira trabalhar em um bloco de palavras especifico, no final
+    utiliza-se o AllREDUCE com a operacao OR para que todos os nos saibam
+    quais palavras ja foram marcadas
+	**********************************************************************/
+    controle=1;
+    compoundWords = compoundDict.getWords();
+    begin=0;
+    substrLen=5;
+    qtd=compoundDict.getQtd();
+    tamanho_bloco = qtd / numprocs + 1;
+    inicio_bloco = id * tamanho_bloco;
+    fim_bloco = inicio_bloco + tamanho_bloco;
+    /********************************************************************
+    Algoritmo de Composicao de palavras
+    Comeca no comeca da palavra a ser composta
+    Procura sempre casar com a substring mais longa
+    *********************************************************************/
+    for(int i=inicio_bloco;i<fim_bloco; i++) {
+        if(i >= qtd)
+            break;
+        currentWord = compoundWords[i];
+        length = strlen(currentWord);
+        begin=0;
+        substrLen=5;
+        for(;;) {
+            memcpy(substr, currentWord + begin, substrLen);
+            substr[substrLen] = '\0';
+          
+            if(shortDict.search(substr) != NOT_FOUND) {
+                begin = begin + substrLen;
+                if(begin+5 >= length)
+                    substrLen = length - begin;
+                else
+                    substrLen = 5;
+            } else {
+                substrLen--;
+                if(substrLen == 0) {
+                    begin++;
                     if(begin+5 >= length)
                         substrLen = length - begin;
                     else
                         substrLen = 5;
-                } else {
-                    substrLen--;
-                    if(substrLen == 0) {
-                        begin++;
-                        if(begin+5 >= length)
-                            substrLen = length - begin;
-                        else
-                            substrLen = 5;
-                    }
-                }
-                if(begin >= length) {
-                    compoundDict.markPos(i);
-       //             cout << endl;
-                    break;
                 }
             }
-
-            imprime_prop(controle, compoundDict.getQtdMarked(), compoundDict.getQtd());
-            float prop = compoundDict.getQtdMarked() / (float) compoundDict.getQtd();
-            
-            if(prop*100 >= porcent) {//Calcula somente ateh tal porcentagem
+            if(begin >= length) {
+                compoundDict.markPos(i);
                 break;
             }
         }
-    }
-    free(reduced);
-    MPI::COMM_WORLD.Barrier();
-	end = MPI::Wtime();
-	MPI::Finalize();
 
+        if(id == 0)
+            imprime_prop(controle, compoundDict.getQtdMarked() * numprocs, compoundDict.getQtd());
+
+        float prop = compoundDict.getQtdMarked()*numprocs / (float) compoundDict.getQtd();
+        
+        if(prop*100 >= porcent) {//Calcula somente ateh tal porcentagem
+            break;
+        }
+    }
+
+    /*
+     * Informa todos os nos quais palavras ja foram encontradas
+     *
+     * **/
+    reduced = (int*) malloc(sizeof(int) * qtd);
+    // Realiza um OR com todos os blocos marcados
+    MPI::COMM_WORLD.Allreduce(compoundDict.getMarked(), reduced, qtd, MPI::INT, MPI::LOR);                                                                                
+    // Realiza a marcacao em todos os dicionarios
+    compoundDict.setMarked(reduced);
+
+    free(reduced);
+    //}
+
+	MPI::COMM_WORLD.Barrier();	
+	MPI::Finalize();
+	// Master - Imprime o tempo total de execucao
 	if(id == 0) {
-		cout << "Runtime = " << end - start << endl;
-	}
+//		cout << "Runtime = " << toc() << endl;
+
+        cout << toc() << endl;
+	}	
 
 	return 0;
-}
-
-//Variaveis globais usadas somente pelas funcoe auxiliares
-//char* text; // Armazena todo o texto do arquivo
-
-
-// Aloca e concatena duas strings
-char* mystrcat(const char* str1,const char* str2) {
-	char* cat = (char*) malloc(sizeof(char) * (strlen(str1) + strlen(str2) + 1));
-	strcpy(cat, str1);
-	strcat(cat, str2);
-	return cat;
 }
 
 //Conta o numero de palavras no arquivo
@@ -262,13 +271,6 @@ void initDict() {
     free(temp);
 }
 
-// Le todo o arquivo e inicializa os dicionarios
-void loadDict(const char* filename) {
-    readText(filename);
-    
-    initDict();
-}
-
 // Parsea as palavras lidas
 void parser() {
     char *pch = strtok (text, "\n");
@@ -313,7 +315,7 @@ char* gera_palavra(int tamanho, unsigned short xsubi[3])  {
 	
 	return str;
 }
-
+/*
 //Imprime a proporcao de palavras encontradas
 void imprime_prop(int &controle, int qtdMarked, int total) {
     float prop = qtdMarked / (float) total;
@@ -357,14 +359,63 @@ void imprime_prop(int &controle, int qtdMarked, int total) {
     	cout << qtdMarked << " - 100% encontrado: " << toc() << endl;
 	}
 }
-
-char *mysubstr(char *str, int begin, int end) {
-    int length = end - begin + 1;
-    char* sub = (char*) malloc(sizeof(char) * (length + 1));
-    strncpy(sub, str+begin, length);
-    sub[length] = '\0';
-    return sub;
+*/
+void imprime_prop(int &controle, int qtdMarked, int total) {
+    float prop = qtdMarked / (float) total;
+	if((prop >= 0.1) && (controle == 1)) {
+    	cout << toc() << endl;
+    	controle++;	
+    }
+    if ((prop >= 0.2) && (controle == 2)) {
+    	cout << toc() << endl;
+    	controle++;	
+    } 
+    if ((prop >= 0.3) && (controle == 3)) {
+    	cout << toc() << endl;
+    	controle++;	
+    } 
+    if ((prop >= 0.4) && (controle == 4)) {
+    	cout << toc() << endl;
+    	controle++;	
+    } 
+    if ((prop >= 0.5) && (controle == 5)) {
+    	cout << toc() << endl;
+    	controle++;
+    } 
+    if ((prop >= 0.6) && (controle == 6)) {
+    	cout << toc() << endl;
+    	controle++;	
+    } 
+    if ((prop >= 0.7) && (controle == 7)) {
+    	cout << toc() << endl;
+    	controle++;	
+    } 
+    if ((prop >= 0.8) && (controle == 8)) {
+    	cout << toc() << endl;
+    	controle++;
+    } 
+    if ((prop >= 0.9) && (controle == 9)) {
+    	cout << toc() << endl;
+    	controle++;
+    } 
+    if (prop == 1.0) {
+    	cout << toc() << endl << endl;
+	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 //Gera palavras com ate 5 letras de forma aleatoria
 void generateWords(int id, int qtd) {
@@ -385,18 +436,17 @@ void generateWords(int id, int qtd) {
             do {
                 tamanho = gera_tamanho_palavra(seed);// myrand(drand_buffer) * 5 + 1;
             } while(!gerar_tamanho[tamanho]);
-             
+            
+            // Gera uma palavra de tamanho n aleatoriamente
             for(int j=0; j<tamanho; j++)
 		        new_word[j] = ('a' + nrand48(&seed[0]) % 26);
             new_word[tamanho] = '\0';
 
-//           char* new_word = gera_palavra(tamanho, drand_buffer);
-           
             if(shortDict.markWord(new_word) != NOT_FOUND) {
     			qtd_encontradas++;
             }
                                                                             
- //           free(new_word);
         }
     }
 }
+
