@@ -1,0 +1,13 @@
+O programa está na pasta \versaofinal
+
+Para compilar utilize o comando make
+
+Para executar utilize o arquivo run_nodes.sh, passando como parâmetros:
+	quantidade de processos
+	a porcentagem de palavras que o programa encontrará
+
+Para executar localmente:
+	mpirun -np $1 ./drunk_speaker palavras.txt $2 ($1 = número de nós, $2 = porcentagem a ser encontrada)
+
+Os resultados estão na pasta stats no formato:
+	nodes"$i"run"$j".txt - $i - número de nós; $j - número de execuções
