@@ -1,32 +1,51 @@
-#include <stdio.h>
-#include <stdlib.h>
+#include "jacobi.h"
 
-int main() {
-    int j_order;
-    int j_row_test;
-    float j_error;
-    int j_ite_max;
-    int** ma;
-    int* mb;
+int** createMatrix( int j_order ){
+    int** matrix;
 
-    scanf("%d", &j_order);
-    scanf("%d", &j_row_test);
-    scanf("%f", &j_error);
-    scanf("%d", &j_ite_max);
-
-    ma = (int**) malloc(j_order * sizeof(int*));
+    /* allocates memory for the matrix*/
+    matrix = new int*[j_order];
     for(int i=0; i<j_order; i++)
-        ma[i] = (int*) malloc(j_order * sizeof(int));
+        matrix[i] = new int[j_order];
 
-    mb = (int*) malloc(j_order * sizeof(int));
+    return matrix;
+}
 
-    for(int i=0; i<j_order; i++)
-        for(int j=0; j<j_order; j++)
-            scanf("%d", &ma[i][j]);
+int* createVector( int j_order ){
+    int *matrix;
 
-    for(int i=0; i<j_order; i++)
-        scanf("%d", &mb[i]);
-    
+    /* allocates memory for the array */
+    matrix = new int[j_order];
 
-    return 0;
+    return matrix;
+}
+
+void printMatrix( int** matrix, int j_order ){
+     /* prints the matrix */
+    for(int i = 0; i < j_order; i++ ){
+        for(int j = 0; j < j_order; j++){
+            printf("%d ", matrix[i][j]);
+        }
+        
+        printf("\n");
+    }    
+}
+
+void printVector( int* vector, int j_order ){
+    /* prints the vector */
+    for(int i = 0; i < j_order; i++){
+       printf("%d ", vector[i]); 
+    }    
+}
+
+void deleteMatrix( int** matrix, int j_order ){
+    /* deletes the matrix */
+    for(int i = 0; i < j_order; i++)
+        delete [] matrix[i];
+    delete [] matrix;   
+}
+
+void deleteVector( int* vector ){
+    /* deletes the vector */
+    delete vector;
 }
