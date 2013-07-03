@@ -5,28 +5,36 @@ int main() {
     int j_row_test;
     float j_error;
     int j_ite_max;
-    int** ma;
-    int* mb;
+    float** ma;
+    float* mb;
+    float* approx;
 
     scanf("%d", &j_order);
     scanf("%d", &j_row_test);
     scanf("%f", &j_error);
     scanf("%d", &j_ite_max);
    
-    ma = createMatrix( j_order );
-    mb = createVector( j_order );
+    ma = createMatrixFloat( j_order );
+    mb = createVectorFloat( j_order );
+    approx = createVectorFloat( j_order );
 
-    /* le os valores da matriz a */
+    /* reads the values of the matrix a */
     for(int i=0; i<j_order; i++)
         for(int j=0; j<j_order; j++)
-            scanf("%d", &ma[i][j]);
+            scanf("%f", &ma[i][j]);
     
-    /* le os valores da matriz b */
+    /* assign the values of the first approximation */
+    for( int i=0; i<j_order; i++ )
+        approx[i] = 0;
+
+    /* reads the values of the matrix b */
     for(int i=0; i<j_order; i++)
-        scanf("%d", &mb[i]);
+        scanf("%f", &mb[i]);
     
-    printMatrix( ma, j_order );
-    printVector( mb, j_order );
+    jacobiMethod( ma, approx, mb, j_order, j_ite_max );
+
+    //printMatrix( ma, j_order );
+    //printVector( mb, j_order );
 
     deleteMatrix( ma, j_order );
     deleteVector( mb );
