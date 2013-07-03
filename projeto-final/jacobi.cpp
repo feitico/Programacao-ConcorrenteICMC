@@ -51,10 +51,10 @@ void printMatrix( int** matrix, int j_order ){
     }    
 }
 
-void printVector( int* vector, int j_order ){
+void printVector( float* vector, int j_order ){
     /* prints the vector */
     for(int i = 0; i < j_order; i++){
-       printf("%d ", vector[i]); 
+       printf("%f ", vector[i]); 
     }    
 }
 
@@ -70,6 +70,48 @@ void deleteVector( float* vector ){
     delete vector;
 }
 
+float Abs( float x, float x0 ){
+    if( (x - x0) >= 0 )
+        return ( x - x0 );
+    else
+        return ( x0 - x ); 
+}
+
+float Abs( float x ){
+    if( x >= 0 )
+        return x;
+    else
+        return -x;
+}
+
+bool checkStoppingCriterion( float* x, float* x0, int n, float error ){
+    float* Dif;
+    float maxNumerator = 0;
+    float maxDenominator = 0;
+
+    Dif = createVectorFloat( n );
+   
+    for(int i = 0; i < n; i++){
+        Dif[i] = Abs(x[i], x0[i]);
+        
+        if( Dif[i] > maxNumerator )
+            maxNumerator = Dif[i];
+    }
+
+    for(int i = 0; i < n; i++){
+        if( Abs(x[i]) > maxDenominator) {
+            maxDenominator = Abs(x[i]);
+        }
+    }
+
+    printf("valor de approach %f\n", maxNumerator/maxDenominator);
+    //Mr
+    if( (maxNumerator/maxDenominator) <= error )
+        return TRUE;
+    else
+        return FALSE;
+}
+
 void multiply( float* matrixRes, float** matrixA, float* matrixB, int size )
 {  
     //function to perform multiplication
@@ -83,19 +125,22 @@ void multiply( float* matrixRes, float** matrixA, float* matrixB, int size )
     }
 }
 
-void jacobiMethod( float** a, float* approx, float* b, int size, int iter ){
+void jacobiMethod( float** a, float* approx, float* b, int size, int iter, float error ){
     float** Dinv; 
     float**R;
     float* matrixRes; 
     float* temp;
-    int ctr = 1, octr;
-    
-    
+    float* approx0;
+    int ctr = 0, octr;
+    int lastIteration = 0; 
+    bool approachAchieved = 0;
+
     Dinv = createMatrixFloat( size );
     R = createMatrixFloat( size );
     matrixRes = createVectorFloat( size );
     temp = createVectorFloat( size );
-
+    approx0 = createVectorFloat( size );
+    
     //We calculate the diagonal inverse matrix make all other entries
     //as zero except Diagonal entries whose resciprocal we store
     for(int row = 0; row < size; row++){
@@ -119,7 +164,11 @@ void jacobiMethod( float** a, float* approx, float* b, int size, int iter ){
         }
     }
 
-    while( ctr <= iter ){
+    while( ctr <= iter && approachAchieved == FALSE){
+        //copy values of approx to approx0 
+        for(int i = 0; i < size; i++)
+            approx0[i] = approx[i];
+        
         //multiply L+U and the approximation
         multiply( matrixRes, R, approx, size );
         
@@ -135,13 +184,19 @@ void jacobiMethod( float** a, float* approx, float* b, int size, int iter ){
             //store matrixRes value int the nex approximation
             approx[octr] = matrixRes[octr];
         }
+        
+        printVector( approx, size );
 
-        printf("The Value after iteration %d is\n", ctr);
-        for( int row = 0; row < size; row++ ){
-            //display the value after the pass
-            printf("%.3f\n", approx[row]);
-        }
-
+        if( ctr > 0 )
+            approachAchieved = checkStoppingCriterion( approx, approx0, size, error );
+        
+        lastIteration = ctr;
         ctr++;
+    }
+
+    printf("The Value after iteration %d is\n", lastIteration);
+    for( int row = 0; row < size; row++ ){
+        //display the value after the pass
+        printf("%.3f\n", approx[row]);
     }
 }

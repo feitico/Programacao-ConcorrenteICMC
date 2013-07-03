@@ -31,7 +31,7 @@ int main() {
     for(int i=0; i<j_order; i++)
         scanf("%f", &mb[i]);
     
-    jacobiMethod( ma, approx, mb, j_order, j_ite_max );
+    jacobiMethod( ma, approx, mb, j_order, j_ite_max, j_error );
 
     //printMatrix( ma, j_order );
     //printVector( mb, j_order );
