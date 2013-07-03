@@ -14,4 +14,4 @@ void printVector( float* vector, int j_order );
 void deleteMatrix( float** matrix, int j_order );
 void deleteVector( float* vector );
 void multiply( float* matrixRes, float** matrixA, float* matrixB, int size );
-void jacobiMethod( float** a, float* approx, float* b, int size, int iter, float error );
+int jacobiMethod( float** a, float* approx, float* b, int size, int iter, float error );

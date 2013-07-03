@@ -4,10 +4,11 @@ int main() {
     int j_order;
     int j_row_test;
     float j_error;
-    int j_ite_max;
+    int j_ite_max, qtdIteracoes;
     float** ma;
     float* mb;
     float* approx;
+    float result = 0;
 
     scanf("%d", &j_order);
     scanf("%d", &j_row_test);
@@ -31,12 +32,16 @@ int main() {
     for(int i=0; i<j_order; i++)
         scanf("%f", &mb[i]);
     
-    jacobiMethod( ma, approx, mb, j_order, j_ite_max, j_error );
+    qtdIteracoes = jacobiMethod( ma, approx, mb, j_order, j_ite_max, j_error );
 
-    //printMatrix( ma, j_order );
-    //printVector( mb, j_order );
+    for( int i = 0; i < j_order; i++ )
+        result += ma[j_row_test][i] * approx[i];
+    
+    printf("Iterations: %d\n", qtdIteracoes);
+    printf("RowTest: %d => [%f] =? %f \n", j_row_test, result, mb[j_row_test]);
 
     deleteMatrix( ma, j_order );
     deleteVector( mb );
+    deleteVector( approx );
     return 0;
 }

@@ -104,7 +104,6 @@ bool checkStoppingCriterion( float* x, float* x0, int n, float error ){
         }
     }
 
-    printf("valor de approach %f\n", maxNumerator/maxDenominator);
     //Mr
     if( (maxNumerator/maxDenominator) <= error )
         return TRUE;
@@ -125,7 +124,7 @@ void multiply( float* matrixRes, float** matrixA, float* matrixB, int size )
     }
 }
 
-void jacobiMethod( float** a, float* approx, float* b, int size, int iter, float error ){
+int jacobiMethod( float** a, float* approx, float* b, int size, int iter, float error ){
     float** Dinv; 
     float**R;
     float* matrixRes; 
@@ -185,8 +184,6 @@ void jacobiMethod( float** a, float* approx, float* b, int size, int iter, float
             approx[octr] = matrixRes[octr];
         }
         
-        printVector( approx, size );
-
         if( ctr > 0 )
             approachAchieved = checkStoppingCriterion( approx, approx0, size, error );
         
@@ -194,9 +191,11 @@ void jacobiMethod( float** a, float* approx, float* b, int size, int iter, float
         ctr++;
     }
 
-    printf("The Value after iteration %d is\n", lastIteration);
-    for( int row = 0; row < size; row++ ){
-        //display the value after the pass
-        printf("%.3f\n", approx[row]);
-    }
+    deleteMatrix(Dinv, size);
+    deleteMatrix(R, size);
+    deleteVector(matrixRes );
+    deleteVector(temp );
+    deleteVector(approx0 );
+
+    return lastIteration;
 }
