@@ -31,4 +31,3 @@ __global__ void JacobiRichardsonGPU(float* resultado, float* A, float* x, float*
 		}
 	}
 }
-			
