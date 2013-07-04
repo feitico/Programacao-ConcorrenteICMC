@@ -1,4 +1,4 @@
 all:
-	        nvcc jacobi_kernel.cu -o jacobi -arch=sm_30
+	        nvcc jacobi_kernel.cu -o jacobi
 clean:
 	        rm -rf jacobi *.o

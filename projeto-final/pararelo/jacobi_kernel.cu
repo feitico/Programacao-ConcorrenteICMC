@@ -5,76 +5,6 @@
 #define FALSE 0
 #define TRUE 1
 
-__device__ float** createMatrixFloat( int j_order ){
-        float** matrix;
-
-            /* allocates memory for the matrix */
-                matrix = new float*[j_order];
-                    for( int i = 0; i < j_order; i++ )
-                                matrix[i] = new float[j_order];
-
-                                    return matrix;
-}
-
-__device__ int** createMatrix( int j_order ){
-        int** matrix;
-
-            /* allocates memory for the matrix*/
-                matrix = new int*[j_order];
-                    for(int i=0; i<j_order; i++)
-                                matrix[i] = new int[j_order];
-
-                                    return matrix;
-}
-
-__device__ float* createVectorFloat( int j_order ){
-    float *matrix;
-
-    /* allocates memory for the array */
-    matrix = new float[j_order];
-
-    return matrix;
-}
-
-__device__ int* createVector( int j_order ){
-    int *matrix;
-
-    /* allocates memory for the array */
-    matrix = new int[j_order];
-
-    return matrix;
-}
-
-__device__ void printMatrix( int** matrix, int j_order ){
-     /* prints the matrix */
-    for(int i = 0; i < j_order; i++ ){
-        for(int j = 0; j < j_order; j++){
-            printf("%d ", matrix[i][j]);
-        }
-
-        printf("\n");
-    }
-}
-
-__device__ void printVector( float* vector, int j_order ){
-    /* prints the vector */
-    for(int i = 0; i < j_order; i++){
-       printf("%f ", vector[i]);
-    }
-}
-
-__device__ void deleteMatrix( float** matrix, int j_order ){
-    /* deletes the matrix */
-    for(int i = 0; i < j_order; i++)
-        delete [] matrix[i];
-    delete [] matrix;
-}
-
-__device__ void deleteVector( float* vector ){
-    /* deletes the vector */
-    delete vector;
-}
-
 __device__ float Abs( float x, float x0 ){
     if( (x - x0) >= 0 )
         return ( x - x0 );
@@ -90,6 +20,7 @@ __device__ float Abs( float x ){
 }
 
 __device__ bool checkStoppingCriterion( float* x, float* x0, int n, float error ){
+    /*
     float* Dif;
     float maxNumerator = 0;
     float maxDenominator = 0;
@@ -114,6 +45,7 @@ __device__ bool checkStoppingCriterion( float* x, float* x0, int n, float error 
         return TRUE;
     else
         return FALSE;
+    */
 }
 
 __device__ void multiply( float* matrixRes, float** matrixA, float* matrixB, int size )
@@ -139,7 +71,7 @@ __device__ void jacobiMethod( float** a, float* approx, float* b, int size, int 
     int lastIteration = 0;
     bool approachAchieved = 0;
 
-    Dinv = createMatrixFloat( size );
+    /*Dinv = createMatrixFloat( size );
     R = createMatrixFloat( size );
     matrixRes = createVectorFloat( size );
     temp = createVectorFloat( size );
@@ -203,19 +135,16 @@ __device__ void jacobiMethod( float** a, float* approx, float* b, int size, int 
     deleteVector(approx0 );
 
     //return lastIteration;
+    */
 }
 
-__global__ void kernel(float** A, int size){
-
-        printf("o valor de a e\n");
-
-        /*for(int i = 0; i < size; i++){
-                for(int j = 0; j < size; j++){
-                        printf("%f ", A[i][j]);
-                }
-                printf("\n");
-        }
-*/
+__global__ void kernel( float* B ){
+    /**
+    * blockIdx.x contém o Id do bloco a ser executado
+    */
+    //int tid = blockIdx.x;    // this thread handles the data at its thread id;
+    //    B[tid] = 5.4;
+    B[0] = 4.3;
 }
 
 int main() {
@@ -223,60 +152,59 @@ int main() {
     int j_row_test;
     float j_error;
     int j_ite_max, qtdIteracoes;
-    float **ma_d_host;
-    float *mb_d_host, *approx_d_host;
-        float **c_ma_d;
-        float *c_mb_d, *c_approx_d;
+    float **h_ma, **d_ma;
+    float *h_mb, *h_approx;
+    float *d_mb, *d_approx;
     float result = 0;
 
-        printf("digite a ordem da matriz\n");
+    printf("digite a ordem da matriz\n");
     scanf("%d", &j_order);
     scanf("%d", &j_row_test);
     scanf("%f", &j_error);
     scanf("%d", &j_ite_max);
 
-        /* allocate memory cpu */
-        ma_d_host = (float **)calloc(j_order, sizeof(float *));
-        for(int i = 0; i < j_order; i++)
-                ma_d_host[i] = (float *)calloc(j_order, sizeof( float ));
+    /* allocate memory cpu */
+    h_ma = (float **)malloc(j_order * sizeof(float *));
+    for(int i = 0; i < j_order; i++)
+            h_ma[i] = (float *)malloc(j_order * sizeof( float ));
 
-        mb_d_host = (float *)calloc(j_order, sizeof(float));
+    h_mb = (float *)malloc(j_order * sizeof(float));
 
-		approx_d_host = (float *)calloc(j_order, sizeof(float));
+    h_approx = (float *)malloc(j_order * sizeof(float));
 
-
-        /* reads the values of the matrix a */
+    /* reads the values of the matrix a */
     for(int i=0; i<j_order; i++)
         for(int j=0; j<j_order; j++)
-            scanf("%f", &ma_d_host[i][j]);
+            scanf("%f", &h_ma[i][j]);
 
     /* assign the values of the first approximation */
     for( int i=0; i<j_order; i++ )
-        approx_d_host[i] = 0;
+        h_approx[i] = 0;
 
     /* reads the values of the matrix b */
     for(int i=0; i<j_order; i++)
-        scanf("%f", &mb_d_host[i]);
+        scanf("%f", &h_mb[i]);
 
     printf("ira imprimir os valores lidos da matriz A\n");
     for(int i = 0; i < j_order; i++){
-            for(int j = 0; j < j_order; j++){
-                    printf("%f ", ma_d_host[i][j]);
-            }
-            printf("\n");
+        for(int j = 0; j < j_order; j++){
+            printf("%f ", h_ma[i][j]);
+        }
+        printf("\n");
     }
 
 
-    printf("ira imprimir os valores lidos da matriz B\n");
+    printf("ira imprimir os valores lidos do vetor B\n");
     for(int i = 0; i < j_order; i++){
-            printf("%f ", mb_d_host[i]);
+        printf("%f ", h_mb[i]);
     }
 
     printf("\nalocara memoria para a GPU\n");
 
-    /* allocate memory gpu */
+    /* allocate memory gpu to matrix */
+
     //allocate for j_order float pointer
-    cudaMalloc((void***)(&c_ma_d), sizeof(float *) * j_order );
+    /*cudaMalloc((void***)(&c_ma_d), sizeof(float *) * j_order );
     
     for( int i = 0; i < j_order; i++ ){
         float* temp;
@@ -288,15 +216,39 @@ int main() {
         cudaMemcpy(temp, ma_d_host[i], sizeof(float) * j_order, cudaMemcpyHostToDevice );
 
         cudaMemcpy(c_ma_d+i, &temp, sizeof(float*), cudaMemcpyHostToDevice );
-    }
+    }*/
 
-    kernel<<<1,1>>>(c_ma_d, j_order);
-
+    /* allocate memory gpu to vector */
+    cudaMalloc( (void**)&d_mb, j_order * sizeof(float));    
     
+    /* copy the arrays mb_d_host to the GPU */
+    cudaMemcpy( d_mb, h_mb, j_order * sizeof(float), cudaMemcpyHostToDevice );
+    
+    // Perform the array
+    dim3 dimBlock( j_order );
+    dim3 dimGrid( 1 );
+    kernel<<<1,1>>>( d_mb );
 
     printf("saiu do kernel\n");
-    cudaDeviceSynchronize();
-    cudaDeviceReset();
+    
+    //copy the array c_mb_d from GPU to the CPU
+    cudaMemcpy(h_mb, d_mb, j_order * sizeof(float), cudaMemcpyDeviceToHost);
+    cudaFree(d_mb);
+
+    printf("imprimira os valores do vetor B apos sair do kernel\n");
+    for(int i = 0; i < j_order; i++)
+        printf("%f ", h_mb[i]);
+
+    printf("\nimprimira os valores da matriz A apos sair do kernel\n");
+    for(int i = 0; i < j_order; i++){
+        for(int j = 0; j < j_order; j++)
+            printf("%f ", h_ma[i][j]);
+
+        printf("\n");
+    }
+
+    //cudaDeviceSynchronize();
+    //cudaDeviceReset();
     /*qtdIteracoes = jacobiMethod( ma, approx, mb, j_order, j_ite_max, j_error );
 
     for( int i = 0; i < j_order; i++ )
