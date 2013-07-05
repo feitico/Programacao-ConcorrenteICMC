@@ -14,6 +14,39 @@
     } \
 }
 
+#define THREADS 64
+
+ //We calculate the diagonal inverse matrix make all other entries
+ //as zero except Diagonal entries whose resciprocal we store
+__global__ void diagonalization(float* a, float *Dinv, float *R, int size, float *approx, float *approx0){
+    
+    int row = blockIdx.x;
+
+    if( row < size ){
+
+        for( int column = threadIdx.x; column < size; column+=THREADS ){
+            if( row == column )
+                Dinv[row*size + column] = 1/a[row*size + column];
+            else
+                Dinv[row*size + column] = 0;
+        }
+    
+        //calculating the R matrix L+U
+        for( int column = threadIdx.x; column < size; column+=THREADS ){
+            if( row == column ){
+                R[row*size + column] = 0;
+            }
+            else if( row != column ){
+                R[row*size + column] = a[row*size + column];
+            }
+        }
+        
+        __syncthreads();
+        //copy values of approx to approx0 
+        approx0[row] = approx[row];
+    } 
+}
+
 __global__ void jacobiMethod( float* a, float* Dinv, float* R, float* approx, float* b, float* matrixRes, float* temp, float* approx0, int size, int iter, float error, int* qtdIterations, float* d_Dif ){
 
     int ctr = 0, octr;
@@ -22,34 +55,7 @@ __global__ void jacobiMethod( float* a, float* Dinv, float* R, float* approx, fl
 
     *qtdIterations = 0;
 
-    //We calculate the diagonal inverse matrix make all other entries
-    //as zero except Diagonal entries whose resciprocal we store
-    for(int row = 0; row < size; row++){
-        for( int column = 0; column < size; column++ ){
-            if( row == column )
-                Dinv[row*size + column] = 1/a[row*size + column];
-            else
-                Dinv[row*size + column] = 0;
-        }
-    }
-	
-	for(int row = 0; row < size; row++){
-        //calculating the R matrix L+U
-        for( int column = 0; column < size; column++ ){
-            if( row == column ){
-                R[row*size + column] = 0;
-            }
-            else if( row != column ){
-                R[row*size + column] = a[row*size + column];
-            }
-        }
-    }
-
     while( ctr <= iter && approachAchieved == FALSE){
-        //copy values of approx to approx0 
-        for(int i = 0; i < size; i++)
-            approx0[i] = approx[i];
-
         //multiply L+U and the approximation
         //function to perform multiplication
         for( int i = 0; i < size; i++ )
@@ -120,6 +126,10 @@ __global__ void jacobiMethod( float* a, float* Dinv, float* R, float* approx, fl
                 approachAchieved = FALSE;
         }
         
+        //copy values of approx to approx0 
+        for(int i = 0; i < size; i++)
+            approx0[i] = approx[i];
+
         *qtdIterations = ctr;
         ctr++;
     }
@@ -178,9 +188,19 @@ int main() {
     check(cudaMemcpy( d_mb, h_mb, j_order * sizeof(float), cudaMemcpyHostToDevice ));
     check(cudaMemcpy( d_approx, h_approx, j_order * sizeof(float), cudaMemcpyHostToDevice));
 
-    // Perform the array
-    //dim3 dimBlock( j_order );
-    //dim3 dimGrid( 1 );
+    /* initialization time */
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+    float mSec = 0;
+
+    /* order allocation and initialization */
+    diagonalization<<<j_order, THREADS>>>( d_ma, d_Dinv, d_R, j_order, d_approx, d_approx0);
+
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+    cudaEventElapsedTime(&mSec, start, stop);
+    printf("time diagonalization %f\n", mSec);
 
     jacobiMethod<<<1,1>>>( d_ma, d_Dinv, d_R, d_approx, d_mb, d_matrixRes, d_temp, d_approx0, j_order, j_ite_max, j_error, d_qtd_it, d_Dif );
 
