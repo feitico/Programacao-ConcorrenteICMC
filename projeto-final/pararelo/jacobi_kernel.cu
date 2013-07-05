@@ -14,25 +14,11 @@
     } \
 }
 
-__device__ float Abs( float x, float x0 ){
-    if( (x - x0) >= 0 )
-        return ( x - x0 );
-    else
-        return ( x0 - x );
-}
-
-__device__ float Abs( float x ){
-    if( x >= 0 )
-        return x;
-    else
-        return -x;
-}
-
 __global__ void jacobiMethod( float* a, float* Dinv, float* R, float* approx, float* b, float* matrixRes, float* temp, float* approx0, int size, int iter, float error, int* qtdIterations, float* d_Dif ){
 
     int ctr = 0, octr;
     bool approachAchieved = 0;
-    float maxNumerator = 0, maxDenominator = 0;
+    float maxNumerator = 0, maxDenominator = 0, absApprox = 0;
 
     *qtdIterations = 0;
 
@@ -104,15 +90,26 @@ __global__ void jacobiMethod( float* a, float* Dinv, float* R, float* approx, fl
             maxNumerator = 0;
             maxDenominator = 0;
             for(int i = 0; i < size; i++){
-                d_Dif[i] = Abs(approx[i], approx0[i]);
+                //d_Dif[i] = Abs(approx[i], approx0[i])
+                if((approx[i] - approx0[i]) >= 0 )
+                    d_Dif[i] = approx[i] - approx0[i];
+                else
+                    d_Dif[i] = approx0[i] - approx[i];
+                //------------------------------------
 
                 if( d_Dif[i] > maxNumerator )
                     maxNumerator = d_Dif[i];
             }
 
             for(int i = 0; i < size; i++){
-                if( Abs(approx[i]) > maxDenominator) {
-                    maxDenominator = Abs(approx[i]);
+                //Abs(float x)
+                if( approx[i] >= 0 )
+                    absApprox = approx[i];
+                else
+                    absApprox = -approx[i];
+                //----------------------
+                if( absApprox > maxDenominator) {
+                    maxDenominator = absApprox;
                 }
             }
 
