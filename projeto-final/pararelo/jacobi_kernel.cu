@@ -14,7 +14,7 @@
     } \
 }
 
-#define THREADS 64
+#define THREADS 256
 
  //We calculate the diagonal inverse matrix make all other entries
  //as zero except Diagonal entries whose resciprocal we store
@@ -47,104 +47,85 @@ __global__ void diagonalization(float* a, float *Dinv, float *R, int size, float
     } 
 }
 
-__global__ void jacobiMethod( float* a, float* Dinv, float* R, float* approx, float* b, float* matrixRes, float* temp, float* approx0, int size, int iter, float error, int* qtdIterations, float* d_Dif ){
+__global__ void jacobiMethod( float* a, float* Dinv, float* R, float* approx, float* b, float* matrixRes, float* temp, int size, int iter ){
+    __shared__ float cache[THREADS];
+    int row = blockIdx.x;
+    int cacheIndex = threadIdx.x;
+    float temp1 = 0;
 
-    int ctr = 0, octr;
-    bool approachAchieved = 0;
-    float maxNumerator = 0, maxDenominator = 0, absApprox = 0;
+    cache[cacheIndex] = 0;
 
-    *qtdIterations = 0;
-
-    while( ctr <= iter && approachAchieved == FALSE){
-        //multiply L+U and the approximation
-        //function to perform multiplication
-        for( int i = 0; i < size; i++ )
-        {
-            matrixRes[i] = 0;
-            for(int navigate = 0; navigate < size; navigate++){
-                matrixRes[i] = matrixRes[i]+R[i*size + navigate]
-                                *approx[navigate];
-            }
+    //multiply L+U and the approximation
+    //function to perform multiplication
+    if( row < size )
+    {
+        temp1 = 0;
+        //matrixRes[row] = 0;
+        for(int column = threadIdx.x; column < size; column+=THREADS){
+            temp1 += R[row*size + column]
+                            *approx[column];
         }
-        //-----------------------------------------------
+    
+        cache[cacheIndex] = temp1;
+        __syncthreads();
 
-        for( int row = 0; row < size; row++ ){
-            //the matrix( b-Rx )
-            temp[row] = b[row] - matrixRes[row]; //the matrix( b-Rx ) i
+        int i = THREADS/2;
+        while( i != 0){
+            if(cacheIndex < i)
+                cache[cacheIndex] += cache[cacheIndex + i];
+
+            __syncthreads();
+            i /= 2;
         }
 
+        if(cacheIndex == 0){
+            matrixRes[blockIdx.x] = cache[0];        
+        }
+
+        //the matrix( b-Rx )
+        temp[row] = b[row] - matrixRes[row]; //the matrix( b-Rx ) i
+        
         //multiply D inverse and ( b-Rx )
         //function to perform multiplication
-        for( int i = 0; i < size; i++ )
-        {
-            matrixRes[i] = 0;
-            for(int navigate = 0; navigate < size; navigate ++){
-                matrixRes[i] = matrixRes[i]+Dinv[i*size + navigate]
-                                *temp[navigate];
-            }
-        }
-
-        //---------------------------------------------------
-
-        for( octr = 0; octr < size; octr++ ){
-            //store matrixRes value int the nex approximation
-            approx[octr] = matrixRes[octr];
-        }
-
-		if( ctr > 0 ){
-            //fara a verificacao do erro
-            maxNumerator = 0;
-            maxDenominator = 0;
-            for(int i = 0; i < size; i++){
-                //d_Dif[i] = Abs(approx[i], approx0[i])
-                if((approx[i] - approx0[i]) >= 0 )
-                    d_Dif[i] = approx[i] - approx0[i];
-                else
-                    d_Dif[i] = approx0[i] - approx[i];
-                //------------------------------------
-
-                if( d_Dif[i] > maxNumerator )
-                    maxNumerator = d_Dif[i];
-            }
-
-            for(int i = 0; i < size; i++){
-                //Abs(float x)
-                if( approx[i] >= 0 )
-                    absApprox = approx[i];
-                else
-                    absApprox = -approx[i];
-                //----------------------
-                if( absApprox > maxDenominator) {
-                    maxDenominator = absApprox;
-                }
-            }
-
-            //Mr
-            if( (maxNumerator/maxDenominator) <= error )
-                approachAchieved = TRUE;
-            else
-                approachAchieved = FALSE;
+        //matrixRes[row] = 0;
+        temp1 = 0;
+        for(int column = threadIdx.x; column < size; column+=THREADS){
+            temp1 += Dinv[row*size + column]
+                            *temp[column];
         }
         
-        //copy values of approx to approx0 
-        for(int i = 0; i < size; i++)
-            approx0[i] = approx[i];
+        cache[cacheIndex] = temp1;
+        __syncthreads();
 
-        *qtdIterations = ctr;
-        ctr++;
+        i = THREADS/2;
+        while( i != 0){
+            if(cacheIndex < i)
+                cache[cacheIndex] += cache[cacheIndex + i];
+
+            __syncthreads();
+            i /= 2;
+        }
+
+        if(cacheIndex == 0){
+            matrixRes[blockIdx.x] = cache[0];        
+        }
+
+        //store matrixRes value int the next approximation
+        approx[row] = matrixRes[row];
     }
 }
 
 int main() {
     int j_order, j_row_test;
-    int j_ite_max;
-    int h_qtd_it, *d_qtd_it;
-    float j_error;
-    float *h_ma, *h_mb, *h_approx;
+    int j_ite_max, ctr = 0;
+    int qtdIterations = 0;
+    float j_error, maxNumerator = 0, maxDenominator = 0, absApprox = 0;
+    float *h_ma, *h_mb, *h_approx, *h_Dif, *h_approx0;
     float *d_ma, *d_mb, *d_approx;
     float *d_Dinv, *d_R;
-    float *d_matrixRes, *d_temp, *d_approx0, *d_Dif; 
-    
+    float *d_matrixRes, *d_temp, *d_approx0; 
+    bool approachAchieved = 0;
+
     float result = 0;
 
     scanf("%d", &j_order);
@@ -156,6 +137,8 @@ int main() {
     h_ma = (float *)malloc(j_order * j_order * sizeof(float));
     h_mb = (float *)malloc(j_order * sizeof(float));
     h_approx = (float *)malloc(j_order * sizeof(float));
+    h_Dif = (float *)malloc(j_order * sizeof(float));
+    h_approx0 = (float *)malloc(j_order * sizeof(float));
 
     /* reads the values of the matrix a */
     for(int i=0; i<j_order; i++)
@@ -180,8 +163,6 @@ int main() {
     check(cudaMalloc( (void**)&d_matrixRes, j_order * sizeof(float))); 
     check(cudaMalloc( (void**)&d_temp, j_order * sizeof(float)));
     check(cudaMalloc( (void**)&d_approx0, j_order * sizeof(float)));
-    check(cudaMalloc( (void**)&d_Dif, j_order * sizeof(float)));
-    check(cudaMalloc( (void**)&d_qtd_it, sizeof(int)));
     
     /* copy the arrays to the GPU */ 
     check(cudaMemcpy( d_ma, h_ma, j_order * j_order * sizeof(float), cudaMemcpyHostToDevice ));
@@ -196,17 +177,70 @@ int main() {
 
     /* order allocation and initialization */
     diagonalization<<<j_order, THREADS>>>( d_ma, d_Dinv, d_R, j_order, d_approx, d_approx0);
+    check(cudaMemcpy(h_approx0, d_approx0, j_order * sizeof(float), cudaMemcpyDeviceToHost));
 
     cudaEventRecord(stop);
     cudaEventSynchronize(stop);
     cudaEventElapsedTime(&mSec, start, stop);
     printf("time diagonalization %f\n", mSec);
+    
+    cudaEventRecord(start);
 
-    jacobiMethod<<<1,1>>>( d_ma, d_Dinv, d_R, d_approx, d_mb, d_matrixRes, d_temp, d_approx0, j_order, j_ite_max, j_error, d_qtd_it, d_Dif );
+    while( ctr <= j_ite_max && approachAchieved == FALSE  ){
+        
+        // --- jacobiMethod --- //
+        jacobiMethod<<<j_order,THREADS>>>( d_ma, d_Dinv, d_R, d_approx, d_mb, d_matrixRes, d_temp, j_order, j_ite_max );
+ 
+        check(cudaMemcpy(h_approx, d_approx, j_order * sizeof(float), cudaMemcpyDeviceToHost));
 
-    //copy the array d_approx from GPU to the CPU
-    check(cudaMemcpy(h_approx, d_approx, j_order * sizeof(float), cudaMemcpyDeviceToHost));
-    check(cudaMemcpy(&h_qtd_it, d_qtd_it, sizeof(int), cudaMemcpyDeviceToHost));
+        //--- Check Error --- //
+     	if( ctr > 0 ){
+            //fara a verificacao do erro
+            maxNumerator = 0;
+            maxDenominator = 0;
+            for(int i = 0; i < j_order; i++){
+                if((h_approx[i] - h_approx0[i]) >= 0 )
+                    h_Dif[i] = h_approx[i] - h_approx0[i];
+                else
+                    h_Dif[i] = h_approx0[i] - h_approx[i];
+                //------------------------------------
+
+                if( h_Dif[i] > maxNumerator )
+                    maxNumerator = h_Dif[i];
+            }
+
+            for(int i = 0; i < j_order; i++){
+                //Abs(float x)
+                if( h_approx[i] >= 0 )
+                    absApprox = h_approx[i];
+                else
+                    absApprox = -h_approx[i];
+                //----------------------
+                if( absApprox > maxDenominator) {
+                    maxDenominator = absApprox;
+                }
+            }
+
+            //Mr
+            if( (maxNumerator/maxDenominator) <= j_error )
+                approachAchieved = TRUE;
+            else
+                approachAchieved = FALSE;
+        }
+
+        //copy values of approx to approx0 
+        for(int i = 0; i < j_order; i++)
+            h_approx0[i] = h_approx[i];
+
+        qtdIterations = ctr;
+        ctr++;
+    }
+    
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+    cudaEventElapsedTime(&mSec, start, stop);
+    printf("Method jacobi: %f\n", mSec);
+
     cudaFree(d_ma);
     cudaFree(d_Dinv);
     cudaFree(d_R);
@@ -216,14 +250,12 @@ int main() {
     cudaFree(d_matrixRes);
     cudaFree(d_temp);
     cudaFree(d_approx0);
-    cudaFree(d_Dif);
-    cudaFree(d_qtd_it);
 
     //calculate result
     for( int i = 0; i < j_order; i++ )
         result += h_ma[j_row_test*j_order + i] * h_approx[i];
 
-    printf("Iterations: %d\n", h_qtd_it );
+    printf("Iterations: %d\n", qtdIterations );
     printf("RowTest: %d => [%f] =? %f \n", j_row_test, result, h_mb[j_row_test]);
 
     cudaThreadSynchronize();
@@ -231,5 +263,7 @@ int main() {
     free(h_ma);
     free(h_mb);
     free(h_approx);
+    free(h_approx0);
+    free(h_Dif);
     return 0;
 }
