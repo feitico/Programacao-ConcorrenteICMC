@@ -1,0 +1,21 @@
+O programa possui uma versão sequencial e outra paralela, encontram-se nas pastas 
+/projeto-final/sequencial e /projeto-final/paralelo respectivamente.
+
+Para compilar basta entrar na pasta do projeto sequencial ou paralelo e utilizar o comando make.
+
+Para executar utilize o comando ./jacobi < ../data-t3/"matriz_entrada"
+
+Ao fim da execução os resultados são mostrados no seguinte formato:
+
+Número de iterações efetuadas pelos programas
+Valor aproximado resultado do processo e a comparação com o valor da matriz B
+Exemplo de saída
+
+---------------------------------------------------------
+Iterations: 1607
+RowTest: 2 => [36.924484] =? 37.000000
+-------------------------------------------------------
+
+1607 = número de iterações
+2 = índice da fila da matriz A para efetuar a comparação, esse índice pode ser: [0, 1, 2, ...n-1], onde n = ordem da matriz 
+

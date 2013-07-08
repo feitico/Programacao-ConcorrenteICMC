@@ -83,11 +83,12 @@ __global__ void jacobiMethod(float *ma, float *x, int size, float *dev_sum){
 int main(int argc, char * argv[]){
     int j_order, j_row_test;
     float j_error, j_ite_max;
-    float *h_ma, *h_mb, *h_x, *h_xold; 
-    float *h_maOrigin, h_mbOrigin, *h_sum;
+    float *h_ma, *h_mb, *h_x, *h_x0; 
+    float *h_ma0, h_mb0, *h_sum;
     float *dev_ma, *dev_mb, *dev_x, *dev_sum;
     int ite = 0;
     float maxDif, maxh_x, mr;
+    float result = 0;
 
     scanf("%d", &j_order);
     scanf("%d", &j_row_test);
@@ -96,10 +97,10 @@ int main(int argc, char * argv[]){
 
     /*  allocate Memory cpu */
     h_ma = (float*)malloc(sizeof(float)*j_order*j_order);
-    h_maOrigin = (float*)malloc(sizeof(float)*j_order);
+    h_ma0 = (float*)malloc(sizeof(float)*j_order);
     h_mb = (float*)malloc(sizeof(float)*j_order);
     h_x = (float*)malloc(sizeof(float)*j_order);
-    h_xold = (float*)malloc(sizeof(float)*j_order);
+    h_x0 = (float*)malloc(sizeof(float)*j_order);
     h_sum = (float*)malloc(sizeof(float)*j_order);
 
     /* reads the values of the matrix a */
@@ -107,7 +108,7 @@ int main(int argc, char * argv[]){
         for(int j = 0; j<j_order; j++){
             scanf("%f", &h_ma[j*j_order+i]);
             if(i==j_row_test)
-                h_maOrigin[j] = h_ma[j*j_order+i];
+                h_ma0[j] = h_ma[j*j_order+i];
         }
 	}
     
@@ -115,7 +116,7 @@ int main(int argc, char * argv[]){
     for(int i=0; i<j_order; i++){
         scanf("%f", &h_mb[i]);
         if(i == j_row_test)
-            h_mbOrigin = h_mb[i];
+            h_mb0 = h_mb[i];
     }
     
     /* allocate memory gpu  */
@@ -124,7 +125,7 @@ int main(int argc, char * argv[]){
     cudaMalloc((void**)&dev_x, j_order*sizeof(float));
     cudaMalloc((void**)&dev_sum, j_order*sizeof(float));
     
-    /* copy array to the GPU */
+    /* copy array from cpu to the GPU */
     cudaMemcpy(dev_ma, h_ma, j_order*j_order*sizeof(float), cudaMemcpyHostToDevice);
     cudaMemcpy(dev_mb, h_mb, j_order*sizeof(float), cudaMemcpyHostToDevice);
     cudaMemcpy(dev_x, h_x, j_order*sizeof(float), cudaMemcpyHostToDevice);
@@ -132,25 +133,27 @@ int main(int argc, char * argv[]){
     /* order de allocation and inicialization */
     /* call function device diagonalization */
     diagonalization<<<j_order,THREADS>>>(dev_ma, dev_mb, dev_x, j_order); // OK
-
+    
+    /* copy array from gpu to the cpu */
 	cudaMemcpy(h_mb, dev_mb, j_order*sizeof(float), cudaMemcpyDeviceToHost);
     cudaMemcpy(h_x, dev_x, j_order*sizeof(float), cudaMemcpyDeviceToHost);
  
-    mr = FLT_MAX;
+    mr = FLT_MAX; //variable check error
     while(ite < j_ite_max && mr > j_error){
         // --- JacobiMethod --- //
         jacobiMethod<<<j_order , THREADS>>>(dev_ma, dev_x, j_order, dev_sum);
-
+        
+        /* copy variable dev_sum from device to host h_sum  */
         cudaMemcpy(h_sum, dev_sum, j_order*sizeof(float), cudaMemcpyDeviceToHost);
         
         // --- Check Error --- //
         maxDif = maxh_x = FLT_MIN;
         for(int i = 0 ; i < j_order; i++){
-            h_xold[i] = h_x[i];
+            h_x0[i] = h_x[i];
             h_x[i] = (h_mb[i] - h_sum[i]);
 
-            if(fabs(h_x[i] - h_xold[i]) > maxDif)
-                maxDif = fabs(h_x[i] - h_xold[i]);
+            if(fabs(h_x[i] - h_x0[i]) > maxDif)
+                maxDif = fabs(h_x[i] - h_x0[i]);
 
             if(fabs(h_x[i]) > maxh_x)
                 maxh_x = fabs(h_x[i]);
@@ -160,14 +163,15 @@ int main(int argc, char * argv[]){
         ite++;
         cudaMemcpy(dev_x, h_x, j_order*sizeof(float), cudaMemcpyHostToDevice);
     }
-
-    float resultAux=0;
+    
+    //calc final value
     for(int j=0; j<j_order; j++){
-        resultAux += h_maOrigin[j]*h_x[j];
+        result += h_ma0[j]*h_x[j];
     }
-
+    
+    //Final Result
     printf("Iterations: %d\n", ite );
-    printf("RowTest: %d => [%f] =? %f \n", j_row_test, resultAux, h_mbOrigin);
+    printf("RowTest: %d => [%f] =? %f \n", j_row_test, result, h_mb0);
     
     //free memory gpu
     cudaFree(dev_ma); 
@@ -179,8 +183,8 @@ int main(int argc, char * argv[]){
     free(h_ma); 
     free(h_mb); 
     free(h_x); 
-    free(h_xold); 
-    free(h_maOrigin); 
+    free(h_x0); 
+    free(h_ma0); 
     free(h_sum);
 
     return 0;
